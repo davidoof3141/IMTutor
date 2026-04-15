@@ -1,0 +1,14 @@
+fastapi==0.135.3
+uvicorn==0.43.0
+python-dotenv==1.2.2
+anthropic==0.89.0
+langchain==1.2.15
+langchain-anthropic==1.4.0
+langchain-community==0.4.1
+langchain-core==1.2.26
+langchain-text-splitters==1.1.1
+langchain-huggingface==1.2.1
+faiss-cpu==1.13.2
+PyMuPDF==1.27.2.2
+sentence-transformers==5.3.0
+pydantic==2.12.5

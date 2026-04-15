@@ -1,0 +1,55 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+frontend/node_modules
+dist
+dist-ssr
+*.local
+
+# Environment / secrets
+.env
+**/.env
+.env.*
+**/.env.*
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Python
+**/__pycache__/
+**/*.py[cod]
+**/.pytest_cache/
+**/.mypy_cache/
+
+# Virtual environments
+venv/
+.venv/
+**/venv/
+**/.venv/
+
+# Frontend build artifacts
+frontend/.vite/
+frontend/coverage/
+
+# Backend local/generated data
+backend/faiss_index/*.faiss
+backend/faiss_index/*.pkl
+
+# Local input documents
+Krcmar2015_ch3.pdf
+backend/Krcmar2015_ch3.pdf
