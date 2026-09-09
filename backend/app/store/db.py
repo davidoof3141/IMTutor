@@ -149,6 +149,27 @@ CREATE TABLE IF NOT EXISTS lesson_steps (
     rationale TEXT NOT NULL,
     PRIMARY KEY (lesson_id, index)
 );
+
+CREATE EXTENSION IF NOT EXISTS vector;
+
+CREATE TABLE IF NOT EXISTS book_chunks (
+    chunk_id TEXT PRIMARY KEY,
+    text TEXT NOT NULL,
+    page INTEGER NOT NULL,
+    embedding vector(1536) NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS book_chunks_embedding_idx
+    ON book_chunks USING hnsw (embedding vector_cosine_ops);
+
+CREATE TABLE IF NOT EXISTS turn_logs (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    learner_id TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    payload JSONB NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS turn_logs_learner_idx ON turn_logs (learner_id, id);
 """
 
 _pool: "ConnectionPool[Conn] | None" = None

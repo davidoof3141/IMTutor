@@ -7,9 +7,10 @@ travels to the model as a separate message (see app/llm/client.py).
 """
 
 from dataclasses import dataclass
-from pathlib import Path
 
-from app.rag.index import DEFAULT_INDEX_DIR, get_collection
+from app.rag.embeddings import embed_query
+from app.store.book_chunks import BookChunkRepository
+from app.store.db import connection
 
 DEFAULT_TOP_K = 4
 
@@ -22,24 +23,14 @@ class RetrievedChunk:
     distance: float
 
 
-def retrieve(
-    query: str, *, k: int = DEFAULT_TOP_K, index_dir: Path = DEFAULT_INDEX_DIR
-) -> list[RetrievedChunk]:
-    """Returns the k most relevant book chunks, or [] if no index has been built yet."""
-    if not index_dir.exists():
-        return []
-    collection = get_collection(index_dir)
-    count = collection.count()
-    if count == 0:
-        return []
-    result = collection.query(query_texts=[query], n_results=min(k, count))
-    ids = result["ids"][0]
-    docs = result["documents"][0]
-    metadatas = result["metadatas"][0]
-    distances = result["distances"][0]
+def retrieve(query: str, *, k: int = DEFAULT_TOP_K) -> list[RetrievedChunk]:
+    """Returns the k most relevant book chunks, or [] if none have been indexed yet."""
+    query_embedding = embed_query(query)
+    with connection() as conn:
+        rows = BookChunkRepository(conn).search(query_embedding, k=k)
     return [
-        RetrievedChunk(chunk_id=chunk_id, text=doc, page=meta["page"], distance=dist)
-        for chunk_id, doc, meta, dist in zip(ids, docs, metadatas, distances, strict=True)
+        RetrievedChunk(chunk_id=r["chunk_id"], text=r["text"], page=r["page"], distance=r["distance"])
+        for r in rows
     ]
 
 

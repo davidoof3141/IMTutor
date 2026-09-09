@@ -22,12 +22,8 @@ services:
       - "8000:8000"
     env_file:
       - ./backend/.env
-    environment:
-      DATABASE_URL: postgresql://itm:itm@db:5432/itm_tutor
-      HF_HOME: /hf-cache
     volumes:
       - ./backend:/app
-      - hfcache:/hf-cache
     depends_on:
       db:
         condition: service_healthy
@@ -45,4 +41,3 @@ services:
 
 volumes:
   pgdata:
-  hfcache:

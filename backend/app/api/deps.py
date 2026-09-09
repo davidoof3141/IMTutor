@@ -1,6 +1,5 @@
 from collections.abc import Iterator
 from dataclasses import dataclass
-from pathlib import Path
 
 from fastapi import Depends, HTTPException, Request
 
@@ -32,7 +31,6 @@ class AppState:
     curriculum: list[Chapter]
     planner_tables: dict[str, PlannerTable]
     step_templates: dict[str, StepTemplates]
-    turn_log_path: Path
 
 
 def get_state(request: Request) -> AppState:
@@ -53,7 +51,7 @@ class Repos:
     lessons: LessonRepository
 
 
-def get_repos(state: AppState = Depends(get_state)) -> Iterator[Repos]:
+def get_repos() -> Iterator[Repos]:
     """Borrows one pooled Postgres connection for the duration of the request."""
     with connection() as conn:
         yield Repos(
@@ -61,7 +59,7 @@ def get_repos(state: AppState = Depends(get_state)) -> Iterator[Repos]:
             overrides=OverrideRepository(conn),
             sessions=SessionRepository(conn),
             study_mode=StudyModeRepository(conn),
-            turn_logs=TurnLogRepository(state.turn_log_path),
+            turn_logs=TurnLogRepository(conn),
             users=UserRepository(conn),
             conversations=ConversationRepository(conn),
             attachments=AttachmentRepository(conn),

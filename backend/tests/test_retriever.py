@@ -1,10 +1,14 @@
-from pathlib import Path
+import pytest
 
 from app.rag.retriever import RetrievedChunk, format_context, retrieve
+from app.store.db import Conn
 
 
-def test_retrieve_returns_empty_when_index_missing(tmp_path: Path) -> None:
-    assert retrieve("what is information management?", index_dir=tmp_path / "no-such-index") == []
+def test_retrieve_returns_empty_when_no_chunks_indexed(
+    db_conn: Conn, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("app.rag.retriever.embed_query", lambda text: [0.0] * 1536)
+    assert retrieve("what is information management?") == []
 
 
 def test_format_context_of_no_chunks_is_empty_string() -> None:

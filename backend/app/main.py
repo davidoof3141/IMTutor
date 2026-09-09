@@ -1,6 +1,5 @@
-import logging
+import os
 import re
-import threading
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -32,12 +31,9 @@ from app.core.clauses import ClauseCatalogue, load_catalogue
 from app.core.planner import PlannerTable, load_planner_table
 from app.core.rules import RuleSet, load_ruleset
 from app.core.step_templates import StepTemplates, load_step_templates
-from app.rag import index as book_index
 from app.rag.chunking import BOOK_PATH
 from app.rag.toc import extract_curriculum
-from app.store import db, turn_logs
-
-logger = logging.getLogger("app.startup")
+from app.store import db
 
 RULES_DIR = Path(__file__).resolve().parents[1] / "rules"
 RULESET_FILENAME = re.compile(r"^ruleset\.(?P<version>.+)\.yaml$")
@@ -79,18 +75,6 @@ def load_all_planner_tables(
     return planner_tables, step_templates
 
 
-def _warm_book_index() -> None:
-    """Load the embedding model in the background so the first chat turn is fast.
-
-    Retrieval is best-effort, so a failure here is logged and ignored.
-    """
-    try:
-        book_index.warm()
-        logger.info("book index embedding model ready")
-    except Exception:  # retrieval stays best-effort
-        logger.warning("could not warm the book index", exc_info=True)
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     load_dotenv()
@@ -104,18 +88,22 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         curriculum=extract_curriculum(BOOK_PATH),
         planner_tables=planner_tables,
         step_templates=step_templates,
-        turn_log_path=turn_logs.DEFAULT_LOG_PATH,
     )
-    threading.Thread(target=_warm_book_index, name="warm-book-index", daemon=True).start()
     yield
     db.reset_pool()
 
 
 app = FastAPI(title="itm-tutor", lifespan=lifespan)
 
+_origins = [
+    origin.strip()
+    for origin in os.environ.get("FRONTEND_ORIGIN", "http://localhost:5173").split(",")
+    if origin.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=_origins,
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["X-Conversation-Id", "X-Book-Image-Ids", "X-Book-Reference-Pages"],

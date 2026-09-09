@@ -9,8 +9,18 @@ wheels/
 # Virtual environments
 .venv
 
-# Runtime data (sqlite db, turn logs)
-data/
+# Runtime data -- turn logs now live in Postgres (see app/store/turn_logs.py);
+# itm_tutor.db is a stale pre-Postgres sqlite leftover; chroma/ was the old
+# local vector index, replaced by Postgres/pgvector. None of these should
+# ship in the deployment bundle.
+#
+# data/book_images/ and data/chapter_intros.json are deliberately NOT listed
+# here: they're generated-once static assets the deployed app reads at
+# request time (see scripts/extract_book_images.py and
+# scripts/generate_chapter_intros.py) and must be committed to ship with it.
+data/turn_logs.jsonl
+data/itm_tutor.db
+data/chroma/
 
 # Secrets
 .env

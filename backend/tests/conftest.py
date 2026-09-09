@@ -20,7 +20,7 @@ RULES_DIR = Path(__file__).resolve().parents[1] / "rules"
 
 _TABLES = (
     "users, profiles, overrides, study_mode, sessions, conversations, messages, attachments, "
-    "lesson_plans, lesson_steps"
+    "lesson_plans, lesson_steps, turn_logs, book_chunks"
 )
 
 
@@ -133,13 +133,7 @@ def make_learner(
 
 
 @pytest.fixture
-def raw_client(
-    postgres_url: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> Iterator[TestClient]:
-    import app.store.turn_logs as turn_logs_module
-
-    monkeypatch.setattr(turn_logs_module, "DEFAULT_LOG_PATH", tmp_path / "turn_logs.jsonl")
-    monkeypatch.setattr("app.main._warm_book_index", lambda: None)
+def raw_client(postgres_url: str) -> Iterator[TestClient]:
     reset_database()
 
     from app.main import app
