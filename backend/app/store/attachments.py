@@ -1,13 +1,15 @@
 from __future__ import annotations
 
-import io
+import logging
 import uuid
 from typing import Literal
 
+import pymupdf
 from pydantic import BaseModel
-from pypdf import PdfReader
 
 from app.store.db import Conn
+
+logger = logging.getLogger("app.attachments")
 
 Kind = Literal["image", "document"]
 
@@ -31,10 +33,16 @@ MAX_IMAGE_BYTES = 5 * 1024 * 1024  # base64 inflates ~33%, and vision providers 
 MAX_EXTRACTED_CHARS = 40_000
 _TRUNCATION_MARKER = "\n…[gekürzt]"
 
+# A learner-uploaded PDF is parsed synchronously in the request, so a
+# pathological file must not be able to tie a worker up. We stop well before
+# the char cap would anyway (a 40k-char budget is ~15-20 pages of prose) and
+# swallow any parser failure rather than 500 the upload.
+_MAX_PDF_PAGES = 50
+
 
 def extract_text(data: bytes, mime_type: str) -> str | None:
     """Best-effort text extraction for a document attachment, truncated to
-    `MAX_EXTRACTED_CHARS`. Returns None for images."""
+    `MAX_EXTRACTED_CHARS`. Returns None for images, "" when extraction fails."""
     if mime_type == "application/pdf":
         text = _extract_pdf_text(data)
     elif mime_type in ("text/plain", "text/markdown"):
@@ -47,9 +55,17 @@ def extract_text(data: bytes, mime_type: str) -> str | None:
 
 
 def _extract_pdf_text(data: bytes) -> str:
-    reader = PdfReader(io.BytesIO(data))
-    pages = (page.extract_text() or "" for page in reader.pages)
-    return "\n\n".join(text for text in pages if text)
+    parts: list[str] = []
+    try:
+        with pymupdf.open(stream=data, filetype="pdf") as doc:
+            for page in doc.pages(0, min(doc.page_count, _MAX_PDF_PAGES)):
+                parts.append(page.get_text())
+                if sum(len(p) for p in parts) >= MAX_EXTRACTED_CHARS:
+                    break
+    except Exception:
+        logger.exception("PDF text extraction failed for a %d-byte upload", len(data))
+        return ""
+    return "\n\n".join(p for p in parts if p)
 
 
 class AttachmentMeta(BaseModel):

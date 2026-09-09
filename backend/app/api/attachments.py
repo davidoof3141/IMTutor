@@ -1,3 +1,6 @@
+import re
+from urllib.parse import quote
+
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import Response
 
@@ -12,6 +15,19 @@ from app.store.attachments import (
 from app.store.users import User
 
 router = APIRouter(prefix="/api/attachments", tags=["attachments"])
+
+
+def _content_disposition(filename: str) -> str:
+    """A safe `Content-Disposition` value for a user-supplied filename.
+
+    The stored filename is arbitrary text, so quoting it straight into the
+    header would let a `"` or newline inject extra parameters. We emit a
+    scrubbed ASCII `filename` for old clients plus an RFC 5987 `filename*`
+    carrying the real (UTF-8) name.
+    """
+    ascii_name = re.sub(r'[^\x20-\x7e]', "_", filename).replace('"', "").replace("\\", "")
+    ascii_name = ascii_name.strip() or "attachment"
+    return f"inline; filename=\"{ascii_name}\"; filename*=UTF-8''{quote(filename, safe='')}"
 
 
 @router.post("/{learner_id}", response_model=AttachmentMeta, status_code=201)
@@ -67,5 +83,5 @@ def download_attachment(
     return Response(
         content=attachment.data,
         media_type=attachment.mime_type,
-        headers={"Content-Disposition": f'inline; filename="{attachment.filename}"'},
+        headers={"Content-Disposition": _content_disposition(attachment.filename)},
     )

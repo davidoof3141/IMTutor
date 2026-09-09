@@ -20,7 +20,7 @@ RULES_DIR = Path(__file__).resolve().parents[1] / "rules"
 
 _TABLES = (
     "users, profiles, overrides, study_mode, sessions, conversations, messages, attachments, "
-    "lesson_plans, lesson_steps, turn_logs, book_chunks"
+    "lesson_plans, lesson_steps, turn_logs, book_chunks, rate_limits"
 )
 
 

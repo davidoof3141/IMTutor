@@ -1,13 +1,39 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from app.api.deps import Repos, get_current_user, get_repos
 from app.security import create_token, hash_password, verify_password
-from app.store.users import User
+from app.store.users import User, UsernameTaken
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+
+# Fixed-window abuse caps, per client, for the two unauthenticated endpoints.
+# Generous enough that a fat-fingered human never notices; tight enough that
+# online password guessing and bulk-registration are not practical.
+_LOGIN_MAX_ATTEMPTS = 10
+_LOGIN_WINDOW_SECONDS = 5 * 60
+_REGISTER_MAX_ATTEMPTS = 10
+_REGISTER_WINDOW_SECONDS = 60 * 60
+
+
+def _client_id(request: Request) -> str:
+    """Best-effort caller identity for rate limiting. Trusts the first
+    `X-Forwarded-For` hop (set by the platform proxy in front of the app);
+    falls back to the socket peer for a direct connection."""
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def _rate_limit(request: Request, repos: Repos, action: str, limit: int, window: int) -> None:
+    if repos.rate_limits.hit(f"{action}:{_client_id(request)}", limit=limit, window_seconds=window):
+        raise HTTPException(
+            status_code=429,
+            detail="too many attempts, please wait a few minutes and try again",
+        )
 
 
 class Credentials(BaseModel):
@@ -30,21 +56,33 @@ class MeResponse(BaseModel):
 
 
 @router.post("/register", response_model=RegisterResponse, status_code=201)
-def register(body: Credentials, repos: Repos = Depends(get_repos)) -> RegisterResponse:
-    if repos.users.exists(body.username):
-        raise HTTPException(status_code=409, detail="username already taken")
-    repos.users.create(
-        user_id=str(uuid.uuid4()),
-        username=body.username,
-        password_hash=hash_password(body.password),
-        role="learner",
-        status="pending",
+def register(
+    body: Credentials, request: Request, repos: Repos = Depends(get_repos)
+) -> RegisterResponse:
+    _rate_limit(
+        request, repos, "register", _REGISTER_MAX_ATTEMPTS, _REGISTER_WINDOW_SECONDS
     )
+    try:
+        repos.users.create(
+            user_id=str(uuid.uuid4()),
+            username=body.username,
+            password_hash=hash_password(body.password),
+            role="learner",
+            status="pending",
+        )
+    except UsernameTaken:
+        # Deliberately not surfaced: a distinct "already taken" response lets
+        # an attacker enumerate registered usernames. The caller sees the
+        # same "pending" either way.
+        pass
     return RegisterResponse(status="pending")
 
 
 @router.post("/login", response_model=LoginResponse)
-def login(body: Credentials, repos: Repos = Depends(get_repos)) -> LoginResponse:
+def login(
+    body: Credentials, request: Request, repos: Repos = Depends(get_repos)
+) -> LoginResponse:
+    _rate_limit(request, repos, "login", _LOGIN_MAX_ATTEMPTS, _LOGIN_WINDOW_SECONDS)
     found = repos.users.get_by_username_with_hash(body.username)
     if found is None or not verify_password(body.password, found[1]):
         raise HTTPException(status_code=401, detail="wrong username or password")
@@ -53,7 +91,7 @@ def login(body: Credentials, repos: Repos = Depends(get_repos)) -> LoginResponse
         raise HTTPException(status_code=403, detail="account is awaiting admin approval")
     if user.status == "rejected":
         raise HTTPException(status_code=403, detail="account was rejected by an admin")
-    return LoginResponse(token=create_token(user.id), user=user)
+    return LoginResponse(token=create_token(user.id, user.token_version), user=user)
 
 
 @router.get("/me", response_model=MeResponse)

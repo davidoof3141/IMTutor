@@ -121,3 +121,64 @@ def test_create_user_is_admin_only(raw_client: TestClient) -> None:
         headers={"Authorization": f"Bearer {learner}"},
     )
     assert r.status_code == 403
+
+
+def test_login_is_rate_limited(raw_client: TestClient) -> None:
+    raw_client.post("/api/auth/register", json={"username": "eve", "password": "password1"})
+    attempts = [
+        raw_client.post(
+            "/api/auth/login", json={"username": "eve", "password": "wrong-password"}
+        ).status_code
+        for _ in range(12)
+    ]
+    assert attempts[:10] == [401] * 10
+    assert 429 in attempts[10:]
+
+
+def test_register_does_not_reveal_taken_usernames(raw_client: TestClient) -> None:
+    first = raw_client.post(
+        "/api/auth/register", json={"username": "frank", "password": "password1"}
+    )
+    second = raw_client.post(
+        "/api/auth/register", json={"username": "frank", "password": "different1"}
+    )
+    assert first.status_code == second.status_code == 201
+    assert first.json() == second.json() == {"status": "pending"}
+
+    # The original password still works -- the second call was a silent no-op.
+    admin = login(raw_client, **SUPERUSER)
+    headers = {"Authorization": f"Bearer {admin}"}
+    frank_id = next(
+        u["id"] for u in raw_client.get("/api/users", headers=headers).json()
+        if u["username"] == "frank"
+    )
+    raw_client.post(
+        f"/api/users/{frank_id}/status", json={"status": "approved"}, headers=headers
+    )
+    assert (
+        raw_client.post(
+            "/api/auth/login", json={"username": "frank", "password": "password1"}
+        ).status_code
+        == 200
+    )
+
+
+def test_admin_role_change_revokes_existing_tokens(raw_client: TestClient) -> None:
+    token = make_learner(raw_client, "grace", "password1")
+    assert raw_client.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"}).status_code == 200
+
+    admin = login(raw_client, **SUPERUSER)
+    headers = {"Authorization": f"Bearer {admin}"}
+    grace_id = next(
+        u["id"] for u in raw_client.get("/api/users", headers=headers).json()
+        if u["username"] == "grace"
+    )
+    raw_client.post(f"/api/users/{grace_id}/role", json={"role": "admin"}, headers=headers)
+
+    # The token issued before the change no longer works; a fresh login does.
+    assert raw_client.get(
+        "/api/auth/me", headers={"Authorization": f"Bearer {token}"}
+    ).status_code == 401
+    assert raw_client.post(
+        "/api/auth/login", json={"username": "grace", "password": "password1"}
+    ).status_code == 200

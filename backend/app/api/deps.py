@@ -18,6 +18,7 @@ from app.store.db import connection
 from app.store.lessons import LessonRepository
 from app.store.overrides import OverrideRepository
 from app.store.profiles import ProfileRepository
+from app.store.rate_limit import RateLimitRepository
 from app.store.sessions import SessionRepository
 from app.store.study_mode import StudyModeRepository
 from app.store.turn_logs import TurnLogRepository
@@ -49,6 +50,7 @@ class Repos:
     conversations: ConversationRepository
     attachments: AttachmentRepository
     lessons: LessonRepository
+    rate_limits: RateLimitRepository
 
 
 def get_repos() -> Iterator[Repos]:
@@ -64,6 +66,7 @@ def get_repos() -> Iterator[Repos]:
             conversations=ConversationRepository(conn),
             attachments=AttachmentRepository(conn),
             lessons=LessonRepository(conn),
+            rate_limits=RateLimitRepository(conn),
         )
 
 
@@ -74,13 +77,15 @@ def get_current_user(request: Request, repos: Repos = Depends(get_repos)) -> Use
     if scheme.lower() != "bearer" or not token:
         raise HTTPException(status_code=401, detail="not authenticated")
 
-    user_id = decode_token(token)
-    if user_id is None:
+    claims = decode_token(token)
+    if claims is None:
         raise HTTPException(status_code=401, detail="invalid or expired token")
 
-    user = repos.users.get(user_id)
+    user = repos.users.get(claims.user_id)
     if user is None:
         raise HTTPException(status_code=401, detail="account no longer exists")
+    if claims.token_version != user.token_version:
+        raise HTTPException(status_code=401, detail="token has been revoked")
     if user.status != "approved":
         raise HTTPException(status_code=403, detail=f"account {user.status}")
     return user
@@ -105,13 +110,14 @@ def current_vector(profile: Profile, state: AppState, repos: Repos) -> ControlVe
 def authorize_learner(learner_id: str, user: User, repos: Repos) -> None:
     """404 if the learner profile is unknown, 403 if it isn't the caller's.
 
-    Admins may act on any learner. Legacy profiles without an owner
-    (`user_id is None`) are readable by any authenticated user.
+    Admins may act on any learner. A profile with no owner (`user_id is
+    None` -- only pre-auth legacy rows) belongs to nobody and is reachable
+    by admins only.
     """
     profile = repos.profiles.get(learner_id)
     if profile is None:
         raise HTTPException(status_code=404, detail="learner not found")
     if user.role == "admin":
         return
-    if profile.user_id is not None and profile.user_id != user.id:
+    if profile.user_id != user.id:
         raise HTTPException(status_code=403, detail="not your learner profile")

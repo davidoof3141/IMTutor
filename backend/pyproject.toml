@@ -54,7 +54,7 @@ strict = true
 [[tool.mypy.overrides]]
 # pymupdf ships no type stubs; strict mode would otherwise flag every call
 # into it as untyped.
-module = "app.rag.images"
+module = ["app.rag.images", "app.store.attachments"]
 disallow_untyped_calls = false
 
 [tool.pytest.ini_options]

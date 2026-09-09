@@ -26,8 +26,15 @@ CREATE TABLE IF NOT EXISTS users (
     role TEXT NOT NULL DEFAULT 'learner' CHECK (role IN ('admin', 'learner')),
     status TEXT NOT NULL DEFAULT 'pending'
         CHECK (status IN ('pending', 'approved', 'rejected')),
+    -- Bumped whenever an admin changes this account's role or status; the
+    -- value is baked into every login token and re-checked on each request,
+    -- so a demotion or rejection invalidates tokens already in the wild.
+    token_version INTEGER NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Poor-man's migration for databases created before token_version existed.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER NOT NULL DEFAULT 0;
 
 CREATE TABLE IF NOT EXISTS profiles (
     learner_id TEXT PRIMARY KEY,
@@ -170,6 +177,16 @@ CREATE TABLE IF NOT EXISTS turn_logs (
 );
 
 CREATE INDEX IF NOT EXISTS turn_logs_learner_idx ON turn_logs (learner_id, id);
+
+-- Fixed-window counters for abuse protection on unauthenticated endpoints
+-- (login, register). One row per (action, client) bucket; the window rolls
+-- over lazily on the next hit rather than via a sweep. Shared across
+-- processes so it also holds on serverless, where in-memory counters don't.
+CREATE TABLE IF NOT EXISTS rate_limits (
+    bucket TEXT PRIMARY KEY,
+    window_start TIMESTAMPTZ NOT NULL DEFAULT now(),
+    count INTEGER NOT NULL DEFAULT 0
+);
 """
 
 _pool: "ConnectionPool[Conn] | None" = None

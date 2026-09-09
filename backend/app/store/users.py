@@ -1,12 +1,17 @@
 from datetime import datetime
 from typing import Literal
 
+import psycopg
 from pydantic import BaseModel
 
 from app.store.db import Conn
 
 Role = Literal["admin", "learner"]
 Status = Literal["pending", "approved", "rejected"]
+
+
+class UsernameTaken(Exception):
+    """Raised by `create` when the username is already registered."""
 
 
 class User(BaseModel):
@@ -16,6 +21,7 @@ class User(BaseModel):
     username: str
     role: Role
     status: Status
+    token_version: int
     created_at: datetime
 
 
@@ -26,7 +32,7 @@ class UserRepository:
     control layer and core/ must not depend on it.
     """
 
-    _COLUMNS = "id, username, role, status, created_at"
+    _COLUMNS = "id, username, role, status, token_version, created_at"
 
     def __init__(self, conn: Conn) -> None:
         self._conn = conn
@@ -40,14 +46,18 @@ class UserRepository:
     def create(
         self, *, user_id: str, username: str, password_hash: str, role: Role, status: Status
     ) -> User:
-        row = self._conn.execute(
-            f"""
-            INSERT INTO users (id, username, password_hash, role, status)
-            VALUES (%s, %s, %s, %s, %s)
-            RETURNING {self._COLUMNS}
-            """,
-            (user_id, username, password_hash, role, status),
-        ).fetchone()
+        try:
+            row = self._conn.execute(
+                f"""
+                INSERT INTO users (id, username, password_hash, role, status)
+                VALUES (%s, %s, %s, %s, %s)
+                RETURNING {self._COLUMNS}
+                """,
+                (user_id, username, password_hash, role, status),
+            ).fetchone()
+        except psycopg.errors.UniqueViolation as exc:
+            self._conn.rollback()
+            raise UsernameTaken(username) from exc
         self._conn.commit()
         assert row is not None
         return User(**row)
@@ -75,8 +85,11 @@ class UserRepository:
         return [User(**row) for row in rows]
 
     def set_status(self, user_id: str, status: Status) -> User | None:
+        # Bumping token_version invalidates any login token the user already
+        # holds -- a rejection or suspension takes effect immediately.
         row = self._conn.execute(
-            f"UPDATE users SET status = %s WHERE id = %s RETURNING {self._COLUMNS}",
+            f"UPDATE users SET status = %s, token_version = token_version + 1 "
+            f"WHERE id = %s RETURNING {self._COLUMNS}",
             (status, user_id),
         ).fetchone()
         self._conn.commit()
@@ -84,7 +97,8 @@ class UserRepository:
 
     def set_role(self, user_id: str, role: Role) -> User | None:
         row = self._conn.execute(
-            f"UPDATE users SET role = %s WHERE id = %s RETURNING {self._COLUMNS}",
+            f"UPDATE users SET role = %s, token_version = token_version + 1 "
+            f"WHERE id = %s RETURNING {self._COLUMNS}",
             (role, user_id),
         ).fetchone()
         self._conn.commit()
