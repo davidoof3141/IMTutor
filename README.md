@@ -5,10 +5,11 @@ front of an LLM tutor, with a book-grounded RAG layer over one course
 textbook. See [claude.md](claude.md) for the full spec, [backend/README.md](backend/README.md)
 for backend setup, and [frontend/README.md](frontend/README.md) for frontend setup.
 
-The backend is a stateless FastAPI app by design (see [vercel.json](vercel.json),
-[backend/vercel.json](backend/vercel.json)) — no local disk writes at request
-time, no in-process caches that must survive between requests — so it runs the
-same way on a serverless function or a long-lived container.
+The backend is a stateless FastAPI app by design (see [vercel.json](vercel.json)
+and [backend/vercel.json](backend/vercel.json)). It does no local disk writes
+at request time and keeps no in-process cache that must survive between
+requests, so it runs the same way on a serverless function or a long-lived
+container.
 
 ## Production deployment
 
@@ -39,10 +40,10 @@ flowchart TB
 
 | Piece | Runs where | Notes |
 |---|---|---|
-| Frontend | Vercel — static hosting | Built from `frontend/` with Vite (`npm run build` → `dist/`). No server-side code. |
-| Backend API | Vercel — Python serverless function | `backend/`, entry point `app/main.py`. Vercel's Python runtime installs from `requirements.txt` (regenerated from `pyproject.toml`/`uv.lock` — see [backend/README.md](backend/README.md)), not `uv sync` directly. |
-| Database | Neon (managed Postgres, external to Vercel) | Stores everything the app needs to persist: users, conversations/messages, attachments (as `BYTEA`), lesson plans, turn logs, rate-limit counters, and the book's embedded chunks (`book_chunks`, via the `pgvector` extension). Reached over `DATABASE_URL`. |
-| LLM + embeddings | OpenRouter (external API) | One API key (`OPENROUTER_API_KEY`) for both: chat completions (`app/llm/client.py`, model via `OPENROUTER_MODEL`) and text embeddings (`app/rag/embeddings.py`, model via `OPENROUTER_EMBEDDING_MODEL`). No local ML models — nothing torch-sized ships in the function. |
+| Frontend | Vercel, static hosting | [im-tutor-smoky.vercel.app](https://im-tutor-smoky.vercel.app/). Built from `frontend/` with Vite (`npm run build` produces `dist/`). No server-side code. |
+| Backend API | Vercel, Python serverless function | [backend-red-eight-q9sab1t0oo.vercel.app](https://backend-red-eight-q9sab1t0oo.vercel.app/). `backend/`, entry point `app/main.py`. Vercel's Python runtime installs from `requirements.txt` (regenerated from `pyproject.toml`/`uv.lock`, see [backend/README.md](backend/README.md)), not `uv sync` directly. |
+| Database | Neon, managed Postgres external to Vercel | Host: `ep-squar-bonus-axiy6u3k-pooler.c-4.us-east-2.aws.neon.tech`. Stores everything the app needs to persist: users, conversations/messages, attachments (as `BYTEA`), lesson plans, turn logs, rate-limit counters, and the book's embedded chunks (`book_chunks`, via the `pgvector` extension). Reached over `DATABASE_URL`. |
+| LLM + embeddings | OpenRouter, external API | One API key (`OPENROUTER_API_KEY`) covers both chat completions (`app/llm/client.py`, model via `OPENROUTER_MODEL`) and text embeddings (`app/rag/embeddings.py`, model via `OPENROUTER_EMBEDDING_MODEL`). No local ML models, so nothing torch-sized ships in the function. |
 | Course PDF + extracted figures | Bundled into the backend deployment | `backend/Krcmar2015_Informationsmanagement.pdf` and the images under `backend/data/book_images/` are static, read-only files shipped with the function (produced once by `scripts/extract_book_images.py`), not written at request time. |
 
 Routing: the root [vercel.json](vercel.json) rewrites `/api/*` to the backend
@@ -73,12 +74,12 @@ flowchart LR
 docker compose up
 ```
 
-- `db` — `pgvector/pgvector:pg16` (plain `postgres` lacks the `vector`
+- `db`: `pgvector/pgvector:pg16` (plain `postgres` lacks the `vector`
   extension `book_chunks` needs), bound to `127.0.0.1` only.
-- `backend` — built from `backend/Dockerfile`, reads config from
-  `backend/.env` (copy `backend/.env.example`), `DATABASE_URL` overridden to
-  point at the `db` service.
-- `frontend` — built from `frontend/Dockerfile`, Vite dev server with HMR.
+- `backend`: built from `backend/Dockerfile`, reads config from
+  `backend/.env` (copy `backend/.env.example`); `DATABASE_URL` is overridden
+  to point at the `db` service.
+- `frontend`: built from `frontend/Dockerfile`, Vite dev server with HMR.
 
 ## Required secrets/config
 
@@ -94,5 +95,5 @@ From `backend/.env.example`:
 | `AUTH_SECRET` | HS256 signing secret for login tokens |
 | `SUPERUSER_USERNAME` / `SUPERUSER_PASSWORD` | Seeded as an approved admin on first startup only |
 
-Frontend: `VITE_API_URL` (see `frontend/src/api/client.ts`) — the backend base
-URL; unset locally it defaults to `http://localhost:8000`.
+Frontend: `VITE_API_URL` (see `frontend/src/api/client.ts`) is the backend
+base URL. Unset locally, it defaults to `http://localhost:8000`.
