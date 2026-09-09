@@ -1,0 +1,30 @@
+{
+  "rationale": {
+    "0": "explanation_depth=2",
+    "1": "example_density=2",
+    "2": "always"
+  },
+  "steps": [
+    {
+      "index": 0,
+      "kind": "explain",
+      "page_end": 28,
+      "page_start": 26,
+      "section_ref": "1.1"
+    },
+    {
+      "index": 1,
+      "kind": "example",
+      "page_end": 28,
+      "page_start": 26,
+      "section_ref": "1.1"
+    },
+    {
+      "index": 2,
+      "kind": "recap",
+      "page_end": 28,
+      "page_start": 26,
+      "section_ref": "1.1"
+    }
+  ]
+}

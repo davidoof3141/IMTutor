@@ -1,0 +1,75 @@
+version: v1
+
+defaults:
+  explanation_depth: 3
+  example_density: 3
+  concreteness: 3
+  register: neutral
+  pacing: 2
+  assessment_frequency: every_second_topic
+
+rules:
+  - id: exp_low
+    priority: 10
+    when: { prior_experience: [none, low] }
+    set: { explanation_depth: 4, example_density: 4 }
+
+  - id: exp_high
+    priority: 10
+    when: { prior_experience: high }
+    set: { explanation_depth: 2, example_density: 2 }
+
+  - id: role_practitioner
+    priority: 10
+    when: { role: practitioner }
+    set: { concreteness: 4, register: informal }
+
+  - id: role_academic
+    priority: 10
+    when: { role: academic }
+    set: { concreteness: 2, register: formal }
+
+  - id: goal_certification
+    priority: 8
+    when: { goal: certification }
+    set: { assessment_frequency: every_topic, pacing: 3 }
+
+  - id: goal_orientation
+    priority: 8
+    when: { goal: orientation }
+    set: { assessment_frequency: on_request, pacing: 1 }
+
+  - id: study_time_low
+    priority: 6
+    when: { study_time: under_2h }
+    set: { pacing: 1 }
+
+  - id: study_time_high
+    priority: 6
+    when: { study_time: over_4h }
+    set: { pacing: 3 }
+
+  - id: exp_moderate_practitioner_depth
+    priority: 15
+    when: { prior_experience: moderate, role: practitioner }
+    set: { concreteness: 5 }
+
+  - id: learner_visuell
+    priority: 10
+    when: { learner_type: visuell }
+    set: { concreteness: 4 }
+
+  - id: learner_auditiv
+    priority: 10
+    when: { learner_type: auditiv }
+    set: { explanation_depth: 4 }
+
+  - id: learner_kommunikativ
+    priority: 10
+    when: { learner_type: kommunikativ }
+    set: { register: informal }
+
+  - id: learner_motorisch
+    priority: 10
+    when: { learner_type: motorisch }
+    set: { example_density: 5, concreteness: 5 }

@@ -1,0 +1,40 @@
+version: v1
+
+# pacing (1-3) -> how many sections a whole-chapter lesson covers. Not
+# consulted when the learner picked a specific section (see core/planner.py) --
+# the lesson is that one section and pacing has nothing to select over.
+# Sections beyond the end of the chapter are never invented; plan_lesson caps
+# this to the chapter's actual section count.
+pacing_sections:
+  1: 1
+  2: 2
+  3: 3
+
+# explanation_depth (1-5) -> explain beats per section.
+explain_per_section:
+  1: 1
+  2: 1
+  3: 2
+  4: 2
+  5: 3
+
+# example_density (1-5) -> example beats per section, placed after that
+# section's explain beats.
+example_per_section:
+  1: 0
+  2: 1
+  3: 1
+  4: 2
+  5: 3
+
+# assessment_frequency -> checkpoint placement pattern. The pattern names are
+# data; what each one means (where checkpoints land) is in core/planner.py,
+# the same split as rules.py's match logic vs ruleset.v1.yaml's thresholds.
+#   each_section:         checkpoint after every section
+#   every_second_section:  checkpoint after every second section, plus one
+#                          trailing checkpoint if the section count is odd
+#   none:                 no checkpoint steps
+assessment_pattern:
+  every_topic: each_section
+  every_second_topic: every_second_section
+  on_request: none

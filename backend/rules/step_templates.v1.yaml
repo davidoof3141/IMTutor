@@ -1,0 +1,29 @@
+version: v1
+
+# One fixed instruction per StepKind. `{section_ref}`, `{page_start}` and
+# `{page_end}` are the only substitutions allowed (see
+# core/step_templates.py::format_step) -- no other interpolation, no
+# free text. Passed to the model as their own system message via
+# `complete_turn`'s `book_context` parameter, next to the training-mode focus
+# message (`app/rag/toc.py::format_focus`) -- never folded into
+# `core/assembler.py`'s output.
+templates:
+  explain: >-
+    Dies ist ein Lektionsschritt. Erkläre das nächste Konzept aus Abschnitt
+    {section_ref} des Lehrbuchs (S. {page_start}-{page_end}), gemäß der
+    bereits gegebenen Anweisung zur Erklärungstiefe. Bleibe in diesem
+    Abschnitt; gehe noch nicht zu späterem Stoff über.
+  example: >-
+    Dies ist ein Lektionsschritt. Gib ein durchgerechnetes Beispiel, das ein
+    Konzept aus Abschnitt {section_ref} des Lehrbuchs (S.
+    {page_start}-{page_end}) veranschaulicht, gemäß der bereits gegebenen
+    Anweisung zur Beispieldichte.
+  checkpoint: >-
+    Dies ist ein Lektionsschritt. Stelle der lernenden Person eine kurze
+    Frage zum Verständnis von Abschnitt {section_ref} des Lehrbuchs (S.
+    {page_start}-{page_end}) und warte dann auf die Antwort. Verrate die
+    Antwort noch nicht.
+  recap: >-
+    Dies ist der letzte Lektionsschritt. Fasse kurz zusammen, was in
+    {section_ref} (S. {page_start}-{page_end}) behandelt wurde, und teile der
+    lernenden Person mit, dass die Lektion abgeschlossen ist.
