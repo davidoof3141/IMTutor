@@ -1,6 +1,11 @@
 :root {
+  color-scheme: light;
+
   /* Light theme — matches design concepts 2a / 3a */
   --bg: #f5f6f8;
+  --scrollbar-thumb: rgba(20, 23, 28, 0.24);
+  --scrollbar-thumb-hover: rgba(20, 23, 28, 0.4);
+  --scrollbar-track: transparent;
   --surface: #ffffff;
   --surface-2: #f9fafb;
   --text: #14171c;
@@ -31,8 +36,13 @@
 }
 
 :root[data-theme="dark"] {
+  color-scheme: dark;
+
   /* Dark theme — matches design concepts 2c / 3b */
   --bg: #12181f;
+  --scrollbar-thumb: rgba(232, 237, 242, 0.2);
+  --scrollbar-thumb-hover: rgba(232, 237, 242, 0.35);
+  --scrollbar-track: transparent;
   --surface: #1b232c;
   --surface-2: #161d25;
   --text: #e8edf2;
@@ -61,6 +71,37 @@
 
 * {
   box-sizing: border-box;
+}
+
+/* Theme-aware scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-corner {
+  background: var(--scrollbar-track);
 }
 
 [hidden] {
