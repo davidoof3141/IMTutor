@@ -3,7 +3,11 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from app.api.deps import Repos, get_current_user, get_repos
+from app.api.deps import (
+    Repos,
+    get_current_user_allow_pw_change,
+    get_repos,
+)
 from app.security import create_token, hash_password, verify_password
 from app.store.users import User, UsernameTaken
 
@@ -55,6 +59,11 @@ class MeResponse(BaseModel):
     learner_id: str | None
 
 
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(min_length=8, max_length=128)
+    new_password: str = Field(min_length=8, max_length=128)
+
+
 @router.post("/register", response_model=RegisterResponse, status_code=201)
 def register(
     body: Credentials, request: Request, repos: Repos = Depends(get_repos)
@@ -96,6 +105,30 @@ def login(
 
 @router.get("/me", response_model=MeResponse)
 def me(
-    user: User = Depends(get_current_user), repos: Repos = Depends(get_repos)
+    user: User = Depends(get_current_user_allow_pw_change),
+    repos: Repos = Depends(get_repos),
 ) -> MeResponse:
     return MeResponse(user=user, learner_id=repos.profiles.get_learner_id_for_user(user.id))
+
+
+@router.post("/change-password", response_model=LoginResponse)
+def change_password(
+    body: ChangePasswordRequest,
+    user: User = Depends(get_current_user_allow_pw_change),
+    repos: Repos = Depends(get_repos),
+) -> LoginResponse:
+    """Set a new password for the signed-in account. Also the exit door from a
+    forced one-time-password change -- it is the one authenticated endpoint
+    such an account may call."""
+    found = repos.users.get_by_username_with_hash(user.username)
+    if found is None or not verify_password(body.current_password, found[1]):
+        raise HTTPException(status_code=401, detail="current password is wrong")
+    if body.new_password == body.current_password:
+        raise HTTPException(
+            status_code=400, detail="new password must differ from the current one"
+        )
+    updated = repos.users.set_password(user.id, hash_password(body.new_password))
+    assert updated is not None  # the row was just read above
+    return LoginResponse(
+        token=create_token(updated.id, updated.token_version), user=updated
+    )

@@ -12,6 +12,7 @@ import {
   updateStudyMode,
 } from "./api/client";
 import { AuthScreen } from "./auth/AuthScreen";
+import { ChangePasswordScreen } from "./auth/ChangePasswordScreen";
 import { useAuth } from "./auth/useAuth";
 import { CurriculumPanel } from "./curriculum/CurriculumPanel";
 import { HistorySidebar } from "./history/HistorySidebar";
@@ -237,6 +238,18 @@ function App() {
         onToggleTheme={toggleTheme}
         onLogin={auth.login}
         onRegister={auth.register}
+      />
+    );
+  }
+
+  if (auth.user.must_change_password) {
+    return (
+      <ChangePasswordScreen
+        theme={theme}
+        username={auth.user.username}
+        onToggleTheme={toggleTheme}
+        onSubmit={auth.changePassword}
+        onLogout={handleLogout}
       />
     );
   }

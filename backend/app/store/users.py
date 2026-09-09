@@ -22,6 +22,7 @@ class User(BaseModel):
     role: Role
     status: Status
     token_version: int
+    must_change_password: bool
     created_at: datetime
 
 
@@ -32,7 +33,9 @@ class UserRepository:
     control layer and core/ must not depend on it.
     """
 
-    _COLUMNS = "id, username, role, status, token_version, created_at"
+    _COLUMNS = (
+        "id, username, role, status, token_version, must_change_password, created_at"
+    )
 
     def __init__(self, conn: Conn) -> None:
         self._conn = conn
@@ -44,16 +47,23 @@ class UserRepository:
         return row is not None
 
     def create(
-        self, *, user_id: str, username: str, password_hash: str, role: Role, status: Status
+        self,
+        *,
+        user_id: str,
+        username: str,
+        password_hash: str,
+        role: Role,
+        status: Status,
+        must_change_password: bool = False,
     ) -> User:
         try:
             row = self._conn.execute(
                 f"""
-                INSERT INTO users (id, username, password_hash, role, status)
-                VALUES (%s, %s, %s, %s, %s)
+                INSERT INTO users (id, username, password_hash, role, status, must_change_password)
+                VALUES (%s, %s, %s, %s, %s, %s)
                 RETURNING {self._COLUMNS}
                 """,
-                (user_id, username, password_hash, role, status),
+                (user_id, username, password_hash, role, status, must_change_password),
             ).fetchone()
         except psycopg.errors.UniqueViolation as exc:
             self._conn.rollback()
@@ -100,6 +110,19 @@ class UserRepository:
             f"UPDATE users SET role = %s, token_version = token_version + 1 "
             f"WHERE id = %s RETURNING {self._COLUMNS}",
             (role, user_id),
+        ).fetchone()
+        self._conn.commit()
+        return None if row is None else User(**row)
+
+    def set_password(self, user_id: str, password_hash: str) -> User | None:
+        # Clears the one-time-password flag and bumps token_version so every
+        # other session holding an old token is logged out; the caller issues
+        # a fresh token for the session that made the change.
+        row = self._conn.execute(
+            f"UPDATE users SET password_hash = %s, must_change_password = FALSE, "
+            f"token_version = token_version + 1 "
+            f"WHERE id = %s RETURNING {self._COLUMNS}",
+            (password_hash, user_id),
         ).fetchone()
         self._conn.commit()
         return None if row is None else User(**row)

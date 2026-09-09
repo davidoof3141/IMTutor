@@ -22,6 +22,9 @@ class CreateUserRequest(BaseModel):
     username: str = Field(min_length=3, max_length=32)
     password: str = Field(min_length=8, max_length=128)
     role: Role = "admin"
+    # When true the password is one-time: the account must set a new one
+    # immediately after its first login.
+    temporary_password: bool = False
 
 
 @router.get("", response_model=list[User])
@@ -47,6 +50,7 @@ def create_user(
         password_hash=hash_password(body.password),
         role=body.role,
         status="approved",
+        must_change_password=body.temporary_password,
     )
 
 

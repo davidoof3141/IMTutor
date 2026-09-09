@@ -6,6 +6,7 @@ export interface User {
   username: string;
   role: UserRole;
   status: UserStatus;
+  must_change_password: boolean;
   created_at: string;
 }
 

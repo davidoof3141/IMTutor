@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   AUTH_EXPIRED_EVENT,
+  changePassword as apiChangePassword,
   getMe,
   getToken,
   login as apiLogin,
@@ -63,6 +64,16 @@ export function useAuth() {
     [],
   );
 
+  const changePassword = useCallback(
+    async (currentPassword: string, newPassword: string) => {
+      const result = await apiChangePassword(currentPassword, newPassword);
+      setToken(result.token);
+      const me = await getMe();
+      setState({ status: "authed", user: me.user, learnerId: me.learner_id });
+    },
+    [],
+  );
+
   const logout = useCallback(() => {
     setToken(null);
     setState(ANON);
@@ -72,5 +83,5 @@ export function useAuth() {
     setState((s) => ({ ...s, learnerId }));
   }, []);
 
-  return { ...state, login, register, logout, setLearnerId };
+  return { ...state, login, register, changePassword, logout, setLearnerId };
 }

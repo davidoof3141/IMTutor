@@ -123,6 +123,82 @@ def test_create_user_is_admin_only(raw_client: TestClient) -> None:
     assert r.status_code == 403
 
 
+def test_temporary_password_forces_a_change_before_use(raw_client: TestClient) -> None:
+    admin = login(raw_client, **SUPERUSER)
+    headers = {"Authorization": f"Bearer {admin}"}
+    r = raw_client.post(
+        "/api/users",
+        json={
+            "username": "temp",
+            "password": "temp-pass-1",
+            "role": "learner",
+            "temporary_password": True,
+        },
+        headers=headers,
+    )
+    assert r.status_code == 201
+    assert r.json()["must_change_password"] is True
+
+    # The account logs in, but is barred from everything except /me and the
+    # password change itself.
+    token = login(raw_client, "temp", "temp-pass-1")
+    auth = {"Authorization": f"Bearer {token}"}
+    assert raw_client.get("/api/auth/me", headers=auth).json()["user"]["must_change_password"] is True
+    assert raw_client.get("/api/conversations/anything", headers=auth).status_code == 403
+
+    # Wrong current password is rejected; a matching new password is rejected.
+    assert raw_client.post(
+        "/api/auth/change-password",
+        json={"current_password": "not-it-1", "new_password": "brand-new-1"},
+        headers=auth,
+    ).status_code == 401
+    assert raw_client.post(
+        "/api/auth/change-password",
+        json={"current_password": "temp-pass-1", "new_password": "temp-pass-1"},
+        headers=auth,
+    ).status_code == 400
+
+    changed = raw_client.post(
+        "/api/auth/change-password",
+        json={"current_password": "temp-pass-1", "new_password": "brand-new-1"},
+        headers=auth,
+    )
+    assert changed.status_code == 200
+    assert changed.json()["user"]["must_change_password"] is False
+
+    # The old token was revoked by the version bump; the fresh one works and
+    # the gate is gone (404 = past auth, just an unknown learner id).
+    assert raw_client.get("/api/conversations/anything", headers=auth).status_code == 401
+    new_token = changed.json()["token"]
+    new_auth = {"Authorization": f"Bearer {new_token}"}
+    assert raw_client.get("/api/auth/me", headers=new_auth).json()["user"][
+        "must_change_password"
+    ] is False
+    assert raw_client.get("/api/conversations/anything", headers=new_auth).status_code == 404
+
+    # The temporary password no longer works; the new one does.
+    assert raw_client.post(
+        "/api/auth/login", json={"username": "temp", "password": "temp-pass-1"}
+    ).status_code == 401
+    assert raw_client.post(
+        "/api/auth/login", json={"username": "temp", "password": "brand-new-1"}
+    ).status_code == 200
+
+
+def test_created_user_without_temporary_flag_is_unrestricted(raw_client: TestClient) -> None:
+    admin = login(raw_client, **SUPERUSER)
+    raw_client.post(
+        "/api/users",
+        json={"username": "steady", "password": "steady-pass-1", "role": "learner"},
+        headers={"Authorization": f"Bearer {admin}"},
+    )
+    token = login(raw_client, "steady", "steady-pass-1")
+    auth = {"Authorization": f"Bearer {token}"}
+    assert raw_client.get("/api/auth/me", headers=auth).json()["user"]["must_change_password"] is False
+    # 404 = the password gate let the request through to an unknown learner id.
+    assert raw_client.get("/api/conversations/anything", headers=auth).status_code == 404
+
+
 def test_login_is_rate_limited(raw_client: TestClient) -> None:
     raw_client.post("/api/auth/register", json={"username": "eve", "password": "password1"})
     attempts = [

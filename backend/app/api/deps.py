@@ -70,8 +70,16 @@ def get_repos() -> Iterator[Repos]:
         )
 
 
-def get_current_user(request: Request, repos: Repos = Depends(get_repos)) -> User:
-    """The authenticated, approved user behind an `Authorization: Bearer` header."""
+def get_current_user_allow_pw_change(
+    request: Request, repos: Repos = Depends(get_repos)
+) -> User:
+    """The authenticated, approved user behind an `Authorization: Bearer`
+    header -- but without the "must not owe a password change" gate.
+
+    Only `/api/auth/me` and `/api/auth/change-password` use this: a freshly
+    created account holding a one-time password needs to reach both before it
+    has cleared the flag. Every other route depends on `get_current_user`.
+    """
     header = request.headers.get("Authorization", "")
     scheme, _, token = header.partition(" ")
     if scheme.lower() != "bearer" or not token:
@@ -88,6 +96,16 @@ def get_current_user(request: Request, repos: Repos = Depends(get_repos)) -> Use
         raise HTTPException(status_code=401, detail="token has been revoked")
     if user.status != "approved":
         raise HTTPException(status_code=403, detail=f"account {user.status}")
+    return user
+
+
+def get_current_user(
+    user: User = Depends(get_current_user_allow_pw_change),
+) -> User:
+    """The authenticated, approved user, additionally barred while the account
+    still owes a forced password change."""
+    if user.must_change_password:
+        raise HTTPException(status_code=403, detail="password change required")
     return user
 
 

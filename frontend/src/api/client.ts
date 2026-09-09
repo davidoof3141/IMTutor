@@ -102,16 +102,31 @@ export function getMe(): Promise<MeResponse> {
   return request("/api/auth/me");
 }
 
+export function changePassword(
+  currentPassword: string,
+  newPassword: string,
+): Promise<LoginResponse> {
+  return request("/api/auth/change-password", {
+    method: "POST",
+    body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+  });
+}
+
 // --- User management (admin) ---
 
 export function listUsers(): Promise<User[]> {
   return request("/api/users");
 }
 
-export function createUser(username: string, password: string, role: UserRole): Promise<User> {
+export function createUser(
+  username: string,
+  password: string,
+  role: UserRole,
+  temporaryPassword: boolean,
+): Promise<User> {
   return request("/api/users", {
     method: "POST",
-    body: JSON.stringify({ username, password, role }),
+    body: JSON.stringify({ username, password, role, temporary_password: temporaryPassword }),
   });
 }
 

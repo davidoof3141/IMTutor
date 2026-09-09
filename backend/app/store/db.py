@@ -30,11 +30,15 @@ CREATE TABLE IF NOT EXISTS users (
     -- value is baked into every login token and re-checked on each request,
     -- so a demotion or rejection invalidates tokens already in the wild.
     token_version INTEGER NOT NULL DEFAULT 0,
+    -- Set when an admin hands out a one-time password; the account is barred
+    -- from everything except changing its password until it is cleared.
+    must_change_password BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Poor-man's migration for databases created before token_version existed.
+-- Poor-man's migration for databases created before these columns existed.
 ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN NOT NULL DEFAULT FALSE;
 
 CREATE TABLE IF NOT EXISTS profiles (
     learner_id TEXT PRIMARY KEY,

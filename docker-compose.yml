@@ -1,6 +1,8 @@
 services:
   db:
-    image: postgres:16-alpine
+    # pgvector-enabled Postgres 16 -- the plain postgres image lacks the
+    # `vector` extension that book_chunks needs.
+    image: pgvector/pgvector:pg16
     environment:
       POSTGRES_USER: itm
       POSTGRES_PASSWORD: itm
@@ -24,6 +26,11 @@ services:
       - "8000:8000"
     env_file:
       - ./backend/.env
+    # Overrides DATABASE_URL from .env: inside the Compose network the database
+    # is the `db` service, not localhost (that .env value is for running the
+    # backend on the host).
+    environment:
+      DATABASE_URL: postgresql://itm:itm@db:5432/itm_tutor
     volumes:
       - ./backend:/app
     depends_on:

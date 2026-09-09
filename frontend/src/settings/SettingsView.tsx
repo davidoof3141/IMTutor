@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { ApiError, createUser, listUsers, setUserRole, setUserStatus } from "../api/client";
+import { useCallback, useEffect, useState } from "react";
+import { ApiError, listUsers, setUserRole, setUserStatus } from "../api/client";
 import type { User, UserRole, UserStatus } from "../types";
 import { CHAT_MODELS, CHAT_MODEL_GROUPS } from "./chatModel";
+import { CreateUserModal } from "./CreateUserModal";
 
 interface Props {
   chatModel: string;
@@ -32,11 +33,7 @@ export function SettingsView({ chatModel, onChatModelChange, currentUserId }: Pr
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  const [newUsername, setNewUsername] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [newRole, setNewRole] = useState<UserRole>("admin");
-  const [creating, setCreating] = useState(false);
-  const [createError, setCreateError] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const refresh = useCallback(() => {
     listUsers()
@@ -47,23 +44,6 @@ export function SettingsView({ chatModel, onChatModelChange, currentUserId }: Pr
   }, []);
 
   useEffect(refresh, [refresh]);
-
-  async function handleCreateUser(e: FormEvent) {
-    e.preventDefault();
-    setCreating(true);
-    setCreateError(null);
-    try {
-      const created = await createUser(newUsername.trim(), newPassword, newRole);
-      setUsers((list) => [...(list ?? []), created]);
-      setNewUsername("");
-      setNewPassword("");
-      setNewRole("admin");
-    } catch (err) {
-      setCreateError(err instanceof ApiError ? err.message : "Der Server ist nicht erreichbar.");
-    } finally {
-      setCreating(false);
-    }
-  }
 
   async function run(userId: string, action: () => Promise<User>) {
     setBusyId(userId);
@@ -127,50 +107,26 @@ export function SettingsView({ chatModel, onChatModelChange, currentUserId }: Pr
                 kann.
               </p>
             </div>
-            <button type="button" className="link-btn" onClick={refresh} disabled={busyId !== null}>
-              Aktualisieren
-            </button>
+            <div className="settings-card-actions">
+              <button
+                type="button"
+                className="link-btn"
+                onClick={refresh}
+                disabled={busyId !== null}
+              >
+                Aktualisieren
+              </button>
+              <button
+                type="button"
+                className="invite-btn"
+                onClick={() => setCreateOpen(true)}
+              >
+                Nutzer:in anlegen
+              </button>
+            </div>
           </div>
 
           {error && <p className="error-banner">{error}</p>}
-
-          <form className="create-user-form" onSubmit={(e) => void handleCreateUser(e)}>
-            <input
-              type="text"
-              placeholder="Benutzername"
-              aria-label="Benutzername"
-              value={newUsername}
-              onChange={(e) => setNewUsername(e.target.value)}
-              minLength={3}
-              maxLength={32}
-              required
-              disabled={creating}
-            />
-            <input
-              type="password"
-              placeholder="Passwort"
-              aria-label="Passwort"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              minLength={8}
-              maxLength={128}
-              required
-              disabled={creating}
-            />
-            <select
-              aria-label="Rolle"
-              value={newRole}
-              onChange={(e) => setNewRole(e.target.value as UserRole)}
-              disabled={creating}
-            >
-              <option value="admin">Administrator:in</option>
-              <option value="learner">Lernende:r</option>
-            </select>
-            <button type="submit" className="invite-btn" disabled={creating}>
-              {creating ? "Wird angelegt …" : "Nutzer:in anlegen"}
-            </button>
-          </form>
-          {createError && <p className="error-banner">{createError}</p>}
 
           <div className="user-table-wrap">
             <table className="user-table">
@@ -269,6 +225,13 @@ export function SettingsView({ chatModel, onChatModelChange, currentUserId }: Pr
           </div>
         </section>
       </div>
+
+      {createOpen && (
+        <CreateUserModal
+          onClose={() => setCreateOpen(false)}
+          onCreated={(user) => setUsers((list) => [...(list ?? []), user])}
+        />
+      )}
     </div>
   );
 }
