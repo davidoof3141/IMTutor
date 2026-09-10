@@ -29,7 +29,7 @@ def _onboard(client: TestClient) -> dict:
             "role": "practitioner",
             "prior_experience": "low",
             "goal": "certification",
-            "study_time": "under_2h",
+            "industry": "healthcare",
             "learner_type": "visuell",
         },
     )

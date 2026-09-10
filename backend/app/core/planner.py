@@ -17,7 +17,7 @@ from typing import Literal
 import yaml
 from pydantic import BaseModel, ConfigDict
 
-from app.core.constants import ASSESSMENT_FREQUENCY, EXAMPLE_DENSITY, EXPLANATION_DEPTH, PACING
+from app.core.constants import ASSESSMENT_FREQUENCY, EXAMPLE_DENSITY, EXPLANATION_DEPTH
 from app.core.vector import ADMISSIBLE_VALUES, ControlVector
 from app.rag.toc import Chapter, Section, find_chapter
 
@@ -65,7 +65,6 @@ class PlannerTable(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     version: str
-    pacing_sections: dict[int, int]
     explain_per_section: dict[int, int]
     example_per_section: dict[int, int]
     assessment_pattern: dict[str, AssessmentPattern]
@@ -75,7 +74,6 @@ def load_planner_table(path: Path) -> PlannerTable:
     raw = yaml.safe_load(path.read_text())
     table = PlannerTable(
         version=raw["version"],
-        pacing_sections=raw["pacing_sections"],
         explain_per_section=raw["explain_per_section"],
         example_per_section=raw["example_per_section"],
         assessment_pattern=raw["assessment_pattern"],
@@ -86,9 +84,6 @@ def load_planner_table(path: Path) -> PlannerTable:
 
 def _check_table_totality(table: PlannerTable) -> None:
     missing: list[str] = []
-    for value in ADMISSIBLE_VALUES[PACING]:
-        if value not in table.pacing_sections:
-            missing.append(f"pacing_sections[{value}]")
     for value in ADMISSIBLE_VALUES[EXPLANATION_DEPTH]:
         if value not in table.explain_per_section:
             missing.append(f"explain_per_section[{value}]")
@@ -116,12 +111,7 @@ def _find_section(chapter: Chapter, section_number: str) -> Section | None:
     return next((s for s in chapter.sections if s.number == section_number), None)
 
 
-def _resolve_units(
-    vector: ControlVector,
-    selection: CurriculumSelection,
-    chapter: Chapter,
-    table: PlannerTable,
-) -> list[_Unit]:
+def _resolve_units(selection: CurriculumSelection, chapter: Chapter) -> list[_Unit]:
     if selection.section_number is not None:
         section = _find_section(chapter, selection.section_number)
         if section is None:
@@ -131,9 +121,8 @@ def _resolve_units(
     if not chapter.sections:
         return [_Unit(chapter.number, chapter.page_start, chapter.page_end)]
 
-    # Sections beyond the end of the chapter are not invented.
-    count = min(table.pacing_sections[vector.pacing], len(chapter.sections))
-    return [_Unit(s.number, s.page_start, s.page_end) for s in chapter.sections[:count]]
+    # A whole-chapter lesson covers every section of that chapter.
+    return [_Unit(s.number, s.page_start, s.page_end) for s in chapter.sections]
 
 
 def plan_lesson(
@@ -156,7 +145,7 @@ def plan_lesson(
     if chapter is None:
         raise ValueError(f"unknown chapter: {selection.chapter_number}")
 
-    units = _resolve_units(vector, selection, chapter, table)
+    units = _resolve_units(selection, chapter)
     pattern = table.assessment_pattern[vector.assessment_frequency]
 
     steps: list[LessonStep] = []

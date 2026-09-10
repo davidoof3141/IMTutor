@@ -3,11 +3,11 @@ import { ApiError, onboard } from "../api/client";
 import type { Theme } from "../theme";
 import type {
   Goal,
+  Industry,
   LearnerType,
   OnboardingResponse,
   PriorExperience,
   Role,
-  StudyTime,
 } from "../types";
 
 interface Props {
@@ -35,10 +35,19 @@ const GOAL_OPTIONS: { value: Goal; label: string }[] = [
   { value: "orientation", label: "Überblick gewinnen" },
 ];
 
-const STUDY_TIME_OPTIONS: { value: StudyTime; label: string }[] = [
-  { value: "under_2h", label: "Unter 2 Std./Woche" },
-  { value: "2_to_4h", label: "2–4 Std./Woche" },
-  { value: "over_4h", label: "Über 4 Std./Woche" },
+// Kompakte, IT-management-relevante Branchenliste. "neutral" ist die
+// Rückfalloption und zugleich der Default der Regelbasis.
+const INDUSTRY_OPTIONS: { value: Industry; label: string }[] = [
+  { value: "manufacturing", label: "Fertigung & Industrie" },
+  { value: "finance", label: "Banken & Versicherungen" },
+  { value: "public_sector", label: "Öffentliche Verwaltung" },
+  { value: "healthcare", label: "Gesundheitswesen" },
+  { value: "retail", label: "Handel & E-Commerce" },
+  { value: "it_software", label: "IT & Software" },
+  { value: "logistics", label: "Logistik & Transport" },
+  { value: "energy", label: "Energie & Versorgung" },
+  { value: "consulting", label: "Beratung & Dienstleistung" },
+  { value: "neutral", label: "Branchenneutral" },
 ];
 
 const LEARNER_TYPE_OPTIONS: { value: LearnerType; label: string }[] = [
@@ -54,6 +63,9 @@ interface FieldProps<T extends string> {
   value: T;
   options: { value: T; label: string }[];
   onChange: (value: T) => void;
+  /** Render as a `<select>` instead of a button group -- for fields with
+   *  more options than fit comfortably as inline buttons (e.g. industry). */
+  dropdown?: boolean;
 }
 
 function OnboardingField<T extends string>({
@@ -62,6 +74,7 @@ function OnboardingField<T extends string>({
   value,
   options,
   onChange,
+  dropdown = false,
 }: FieldProps<T>) {
   return (
     <div className="onboarding-field">
@@ -69,20 +82,35 @@ function OnboardingField<T extends string>({
         <div className="field-label">{label}</div>
         <div className="field-description">{description}</div>
       </div>
-      <div className="option-group" role="radiogroup" aria-label={label}>
-        {options.map((opt) => (
-          <button
-            key={opt.value}
-            type="button"
-            role="radio"
-            aria-checked={value === opt.value}
-            className={"option" + (value === opt.value ? " active" : "")}
-            onClick={() => onChange(opt.value)}
-          >
-            {opt.label}
-          </button>
-        ))}
-      </div>
+      {dropdown ? (
+        <select
+          className="field-select"
+          aria-label={label}
+          value={value}
+          onChange={(e) => onChange(e.target.value as T)}
+        >
+          {options.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      ) : (
+        <div className="option-group" role="radiogroup" aria-label={label}>
+          {options.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              role="radio"
+              aria-checked={value === opt.value}
+              className={"option" + (value === opt.value ? " active" : "")}
+              onClick={() => onChange(opt.value)}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -91,7 +119,7 @@ export function OnboardingForm({ onComplete, theme, onToggleTheme }: Props) {
   const [role, setRole] = useState<Role>("practitioner");
   const [priorExperience, setPriorExperience] = useState<PriorExperience>("none");
   const [goal, setGoal] = useState<Goal>("applied_competence");
-  const [studyTime, setStudyTime] = useState<StudyTime>("2_to_4h");
+  const [industry, setIndustry] = useState<Industry>("neutral");
   const [learnerType, setLearnerType] = useState<LearnerType>("kommunikativ");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -105,7 +133,7 @@ export function OnboardingForm({ onComplete, theme, onToggleTheme }: Props) {
         role,
         prior_experience: priorExperience,
         goal,
-        study_time: studyTime,
+        industry,
         learner_type: learnerType,
       });
       onComplete(result);
@@ -176,11 +204,12 @@ export function OnboardingForm({ onComplete, theme, onToggleTheme }: Props) {
               onChange={setGoal}
             />
             <OnboardingField
-              label="Lernzeit"
-              description="Wie viel Zeit kannst du pro Woche lernen?"
-              value={studyTime}
-              options={STUDY_TIME_OPTIONS}
-              onChange={setStudyTime}
+              label="Branche"
+              description="In welchem Umfeld arbeitest du? Die Beispiele des Tutors kommen aus dieser Branche."
+              value={industry}
+              options={INDUSTRY_OPTIONS}
+              onChange={setIndustry}
+              dropdown
             />
             <OnboardingField
               label="Lerntyp"

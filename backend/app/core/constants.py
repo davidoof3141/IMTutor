@@ -8,16 +8,16 @@ NameError instead of a silently-ignored key.
 EXPLANATION_DEPTH = "explanation_depth"
 EXAMPLE_DENSITY = "example_density"
 CONCRETENESS = "concreteness"
+EXAMPLE_DOMAIN = "example_domain"
 REGISTER = "register"
-PACING = "pacing"
 ASSESSMENT_FREQUENCY = "assessment_frequency"
 
 PARAMETER_NAMES = (
     EXPLANATION_DEPTH,
     EXAMPLE_DENSITY,
     CONCRETENESS,
+    EXAMPLE_DOMAIN,
     REGISTER,
-    PACING,
     ASSESSMENT_FREQUENCY,
 )
 

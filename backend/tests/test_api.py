@@ -11,7 +11,7 @@ def _onboard(client: TestClient) -> dict:
             "role": "practitioner",
             "prior_experience": "low",
             "goal": "certification",
-            "study_time": "under_2h",
+            "industry": "healthcare",
             "learner_type": "visuell",
         },
     )
@@ -26,9 +26,10 @@ def test_onboarding_returns_derived_vector_and_attribution(client: TestClient) -
     assert body["attribution"]["explanation_depth"] == "exp_low"
     assert body["derived"]["register"] == "informal"
     assert body["attribution"]["register"] == "role_practitioner"
-    # goal_certification (priority 8) beats study_time_low (priority 6) on pacing
-    assert body["derived"]["pacing"] == 3
-    assert body["attribution"]["pacing"] == "goal_certification"
+    assert body["derived"]["assessment_frequency"] == "every_topic"
+    assert body["attribution"]["assessment_frequency"] == "goal_certification"
+    assert body["derived"]["example_domain"] == "healthcare"
+    assert body["attribution"]["example_domain"] == "industry_healthcare"
 
 
 def test_chat_streams_the_reply_and_logs_the_turn(
@@ -161,14 +162,14 @@ def test_get_config_reflects_overrides(client: TestClient) -> None:
     assert config["override"] == {}
     assert config["effective"] == config["derived"]
 
-    response = client.put(f"/api/config/{learner_id}/override", json={"pacing": 1})
+    response = client.put(f"/api/config/{learner_id}/override", json={"concreteness": 1})
     assert response.status_code == 200
     config = response.json()
-    assert config["override"] == {"pacing": 1}
-    assert config["effective"]["pacing"] == 1
-    assert config["derived"]["pacing"] == 3  # override must not mutate the derived vector
+    assert config["override"] == {"concreteness": 1}
+    assert config["effective"]["concreteness"] == 1
+    assert config["derived"]["concreteness"] == 4  # override must not mutate the derived vector
 
-    response = client.delete(f"/api/config/{learner_id}/override/pacing")
+    response = client.delete(f"/api/config/{learner_id}/override/concreteness")
     assert response.status_code == 200
     assert response.json()["override"] == {}
 

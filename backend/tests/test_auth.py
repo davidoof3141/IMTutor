@@ -35,7 +35,7 @@ def test_unauthenticated_requests_are_rejected(raw_client: TestClient) -> None:
         "role": "practitioner",
         "prior_experience": "low",
         "goal": "certification",
-        "study_time": "under_2h",
+        "industry": "healthcare",
         "learner_type": "visuell",
     }).status_code == 401
 
@@ -56,7 +56,7 @@ def test_learner_cannot_touch_another_learners_config(raw_client: TestClient) ->
             "role": "practitioner",
             "prior_experience": "low",
             "goal": "certification",
-            "study_time": "under_2h",
+            "industry": "healthcare",
             "learner_type": "visuell",
         },
         headers={"Authorization": f"Bearer {token_a}"},
@@ -82,7 +82,7 @@ def test_admin_can_reach_any_learner(raw_client: TestClient) -> None:
             "role": "academic",
             "prior_experience": "high",
             "goal": "orientation",
-            "study_time": "over_4h",
+            "industry": "finance",
             "learner_type": "auditiv",
         },
         headers={"Authorization": f"Bearer {token}"},

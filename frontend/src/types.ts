@@ -23,11 +23,24 @@ export interface MeResponse {
 export type Role = "practitioner" | "analyst" | "academic";
 export type PriorExperience = "none" | "low" | "moderate" | "high";
 export type Goal = "certification" | "applied_competence" | "orientation";
-export type StudyTime = "under_2h" | "2_to_4h" | "over_4h";
+// The learner's working context; decides which world the tutor's examples
+// are drawn from (maps to the example_domain control parameter).
+export type Industry =
+  | "manufacturing"
+  | "finance"
+  | "public_sector"
+  | "healthcare"
+  | "retail"
+  | "it_software"
+  | "logistics"
+  | "energy"
+  | "consulting"
+  | "neutral";
 // Lerntyp (Vester): how the learner prefers to take in new material.
 export type LearnerType = "visuell" | "auditiv" | "kommunikativ" | "motorisch";
 
 export type Register = "formal" | "neutral" | "informal";
+export type ExampleDomain = Industry;
 export type AssessmentFrequency = "every_topic" | "every_second_topic" | "on_request";
 
 export interface Profile {
@@ -35,7 +48,7 @@ export interface Profile {
   role: Role;
   prior_experience: PriorExperience;
   goal: Goal;
-  study_time: StudyTime;
+  industry: Industry;
   learner_type: LearnerType;
   ruleset_version: string;
   created_at: string;
@@ -45,8 +58,8 @@ export interface ControlVector {
   explanation_depth: number;
   example_density: number;
   concreteness: number;
+  example_domain: ExampleDomain;
   register: Register;
-  pacing: number;
   assessment_frequency: AssessmentFrequency;
 }
 

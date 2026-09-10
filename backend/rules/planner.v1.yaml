@@ -1,14 +1,8 @@
 version: v1
 
-# pacing (1-3) -> how many sections a whole-chapter lesson covers. Not
-# consulted when the learner picked a specific section (see core/planner.py) --
-# the lesson is that one section and pacing has nothing to select over.
-# Sections beyond the end of the chapter are never invented; plan_lesson caps
-# this to the chapter's actual section count.
-pacing_sections:
-  1: 1
-  2: 2
-  3: 3
+# A whole-chapter lesson covers every section of that chapter; when the
+# learner picked a specific section the lesson is just that one section.
+# Neither case needs a table entry -- see core/planner.py::_resolve_units.
 
 # explanation_depth (1-5) -> explain beats per section.
 explain_per_section:

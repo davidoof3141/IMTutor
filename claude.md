@@ -51,14 +51,18 @@ or UI copy.
 Role            = Literal["practitioner", "analyst", "academic"]
 PriorExperience = Literal["none", "low", "moderate", "high"]
 Goal            = Literal["certification", "applied_competence", "orientation"]
-StudyTime       = Literal["under_2h", "2_to_4h", "over_4h"]
+Industry        = Literal["manufacturing", "finance", "public_sector", "healthcare",
+                          "retail", "it_software", "logistics", "energy",
+                          "consulting", "neutral"]
+LearnerType     = Literal["visuell", "auditiv", "kommunikativ", "motorisch"]
 
 class Profile(BaseModel):        # immutable
     learner_id: str
     role: Role
     prior_experience: PriorExperience
     goal: Goal
-    study_time: StudyTime
+    industry: Industry
+    learner_type: LearnerType
     ruleset_version: str         # pinned at onboarding
     created_at: datetime
 
@@ -66,6 +70,7 @@ class ControlVector(BaseModel):
     explanation_depth: int       # 1-5
     example_density: int         # 1-5
     concreteness: int            # 1-5
+    example_domain: Industry     # which industry the tutor's examples are drawn from
     register: Literal["formal", "neutral", "informal"]
     pacing: int                  # topics per week, 1-3
     assessment_frequency: Literal["every_topic", "every_second_topic", "on_request"]
@@ -106,8 +111,8 @@ defaults:
   explanation_depth: 3
   example_density: 3
   concreteness: 3
+  example_domain: neutral
   register: neutral
-  pacing: 2
   assessment_frequency: every_second_topic
 rules:
   - id: exp_low
@@ -311,32 +316,36 @@ which fits this project's ethos better than a live, stochastic call would.
 
 `scripts/generate_chapter_intros.py` builds `backend/data/chapter_intros.json`
 (gitignored/rebuildable, same as the book index and figures) by calling
-`complete_turn` once per chapter/section, styled with the *ruleset's default*
-vector (no rule fired, no override — the neutral baseline, since there's no
-per-learner vector to use here). Unlike the other build scripts it needs
-`OPENROUTER_API_KEY` and costs real tokens; rerun it after the book, the
-curriculum, or `clauses.v1.yaml`'s wording changes. `GET
+`complete_turn` twice per chapter/section — once for the overview text, once
+for three starter questions (`STARTERS_INSTRUCTION`, split on newlines) —
+styled with the *ruleset's default* vector (no rule fired, no override — the
+neutral baseline, since there's no per-learner vector to use here). Unlike the
+other build scripts it needs `OPENROUTER_API_KEY` and costs real tokens;
+rerun it after the book, the curriculum, or `clauses.v1.yaml`'s wording
+changes. Each manifest value is `{text, starters}`; a bare string is the
+pre-starters format and still loads (`starters` empty). `GET
 /api/chapter-intro/{learner_id}` (`app/api/chapter_intro.py`) is then a plain
 manifest lookup keyed by `chapter_number` (or `chapter_number:section_number`)
-— no model call, no conversation, no message row, so it never appears in
-conversation history and never touches the turn log either (it isn't a model
-*turn* for this learner, just a static read). A missing manifest entry is a
-404, not a fallback live generation.
+returning `{text, starters}` — no model call, no conversation, no message row,
+so it never appears in conversation history and never touches the turn log
+either (it isn't a model *turn* for this learner, just a static read). A
+missing manifest entry is a 404, not a fallback live generation.
 
 The frontend (`ChatPanel`) re-fetches this every time the training-mode
-selection changes and shows it only while the current thread has zero real
-messages; the moment the learner sends one, the preview is discarded and the
-ordinary `/api/chat` path takes over. It is intentionally a separate concept
-from a lesson's step-0 message (below) — starting a lesson already produces a
-real, persisted introductory turn, so by the time a lesson exists this
-preview's "thread is still empty" condition no longer holds.
+selection changes (`App` starts a fresh thread on any selection change, so
+one lesson's chat never bleeds into the next). The overview is pinned above
+the thread for the whole lesson as a `.chat-intro` card; `starters` replace
+the generic `STARTER_QUESTIONS` chips for that chapter/section (the generic
+set is the fallback for free exploration and for manifest entries with no
+starters). It is intentionally a separate concept from a lesson's step-0
+message (below).
 
 ## Lesson plans
 
 A lesson plan sits beside the control layer and consumes its output; it
-gives training mode a workflow and makes `pacing`/`assessment_frequency`
-observable (the catalogue clauses for those two had no consuming mechanism
-before this). Same purity bar as the control layer:
+gives training mode a workflow and makes `assessment_frequency` observable
+(the catalogue clause for it had no consuming mechanism before this). Same
+purity bar as the control layer:
 
 ```python
 def plan_lesson(
@@ -353,11 +362,12 @@ The plan does **not** change based on how the learner performs: no
 remediation, no skipping, no difficulty adjustment — checkpoint answers are
 ordinary chat turns, logged and otherwise ignored (invariant 6 extended to
 this layer). The numbers a plan is built from live in `rules/planner.v1.yaml`
-(same reasoning as invariant 7): section count per `pacing`, explain/example
-beats per section per `explanation_depth`/`example_density`, and a
-checkpoint placement pattern per `assessment_frequency`. What those numbers
-*mean* — how they turn into a step sequence — is `plan_lesson`'s job, not the
-YAML's.
+(same reasoning as invariant 7): explain/example beats per section per
+`explanation_depth`/`example_density`, and a checkpoint placement pattern per
+`assessment_frequency`. What those numbers *mean* — how they turn into a step
+sequence — is `plan_lesson`'s job, not the YAML's. Section coverage is not
+parameterised: a whole-chapter lesson covers every section of that chapter, a
+section-specific lesson covers just that one.
 
 `lesson_id` and `created_at` are assigned by the caller (`app/api/lesson.py`),
 not the planner — `datetime` can't be imported into `core/planner.py` at all
@@ -367,10 +377,7 @@ full plan: the planner's steps plus that identity/timestamp) lives in
 
 **Rationale**, same spirit as `Attribution` in the mapping layer: a
 `step_index -> "parameter=value"` dict alongside the steps (`recap` always
-attributes to `"always"`). `pacing`'s applicability is recoverable from
-`section_ref` on the plan itself (`None` = whole chapter, pacing applied;
-set = one specific section, pacing had nothing to select over) rather than a
-synthetic rationale entry of its own.
+attributes to `"always"`).
 
 **Step templates** (`rules/step_templates.v1.yaml`, `app/core/step_templates.py`)
 are one fixed instruction sentence per `StepKind`, same totality-at-load-time
@@ -469,14 +476,14 @@ Required, beyond ordinary unit tests:
 
 For the lesson planner:
 
-- **Planner totality** — for all 108 profiles x every chapter/section in the
+- **Planner totality** — for all 1440 profiles x every chapter/section in the
   extracted curriculum, `plan_lesson` returns a non-empty, gap-free step list.
 - **Planner determinism** — 100 calls per (profile, selection), identical
   output.
 - **Rationale completeness** — every step has an attribution entry.
-- **Parameter monotonicity** — raising `explanation_depth`/`example_density`/
-  `pacing` never decreases the corresponding step/section count. Catches a
-  planner-table edit that silently inverts a parameter's effect.
+- **Parameter monotonicity** — raising `explanation_depth`/`example_density`
+  never decreases the corresponding step count. Catches a planner-table edit
+  that silently inverts a parameter's effect.
 - **Template totality** — every `StepKind` has exactly one step template;
   fail at startup otherwise.
 - **Plan immutability** — after any sequence of override changes and

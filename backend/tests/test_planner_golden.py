@@ -36,7 +36,7 @@ CASES = {
             role="practitioner",
             prior_experience="none",
             goal="certification",
-            study_time="under_2h",
+            industry="healthcare",
         ),
         lambda curriculum: CurriculumSelection(
             chapter_number=next(c for c in curriculum if len(c.sections) >= 3).number
@@ -44,7 +44,7 @@ CASES = {
     ),
     "expert_academic_single_section": (
         make_profile(
-            role="academic", prior_experience="high", goal="orientation", study_time="over_4h"
+            role="academic", prior_experience="high", goal="orientation", industry="finance"
         ),
         _select_single_section,
     ),
@@ -53,7 +53,7 @@ CASES = {
             role="practitioner",
             prior_experience="moderate",
             goal="applied_competence",
-            study_time="2_to_4h",
+            industry="manufacturing",
         ),
         lambda curriculum: CurriculumSelection(
             chapter_number=max(curriculum, key=lambda c: len(c.sections)).number

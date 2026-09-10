@@ -2,7 +2,7 @@
 effect -- e.g. a typo that makes a higher explanation_depth explain less.
 """
 
-from app.core.constants import EXAMPLE_DENSITY, EXPLANATION_DEPTH, PACING
+from app.core.constants import EXAMPLE_DENSITY, EXPLANATION_DEPTH
 from app.core.planner import (
     Curriculum,
     CurriculumSelection,
@@ -17,8 +17,8 @@ def _vector(**overrides: object) -> ControlVector:
         "explanation_depth": 3,
         "example_density": 3,
         "concreteness": 3,
+        "example_domain": "neutral",
         "register": "neutral",
-        "pacing": 2,
         "assessment_frequency": "every_second_topic",
     }
     base.update(overrides)
@@ -57,30 +57,23 @@ def test_raising_example_density_never_decreases_example_steps(
     assert counts == sorted(counts)
 
 
-def test_raising_pacing_never_decreases_section_coverage(
+def test_whole_chapter_lesson_covers_every_section(
     curriculum: Curriculum, planner_table: PlannerTable
 ) -> None:
-    # A chapter with enough sections that pacing=1..3 can actually differ.
     chapter = next(c for c in curriculum if len(c.sections) >= 3)
     selection = CurriculumSelection(chapter_number=chapter.number)
-    coverages = []
-    for pacing in ADMISSIBLE_VALUES[PACING]:
-        steps, _ = plan_lesson(_vector(pacing=pacing), selection, curriculum, planner_table)
-        coverages.append(len({s.section_ref for s in steps if s.kind in ("explain", "example")}))
-    assert coverages == sorted(coverages)
+    steps, _ = plan_lesson(_vector(), selection, curriculum, planner_table)
+    covered = {s.section_ref for s in steps if s.kind in ("explain", "example")}
+    assert covered == {s.number for s in chapter.sections}
 
 
-def test_pacing_has_no_effect_when_a_specific_section_is_selected(
+def test_selecting_a_specific_section_covers_only_that_section(
     curriculum: Curriculum, planner_table: PlannerTable
 ) -> None:
     chapter = next(c for c in curriculum if len(c.sections) >= 3)
     selection = CurriculumSelection(
         chapter_number=chapter.number, section_number=chapter.sections[0].number
     )
-    plans = [
-        plan_lesson(_vector(pacing=pacing), selection, curriculum, planner_table)
-        for pacing in ADMISSIBLE_VALUES[PACING]
-    ]
-    first_steps, _ = plans[0]
-    for steps, _ in plans[1:]:
-        assert steps == first_steps
+    steps, _ = plan_lesson(_vector(), selection, curriculum, planner_table)
+    covered = {s.section_ref for s in steps if s.kind in ("explain", "example")}
+    assert covered == {chapter.sections[0].number}

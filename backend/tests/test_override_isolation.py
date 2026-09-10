@@ -15,7 +15,7 @@ def test_override_then_full_revert_recovers_derived(ruleset: RuleSet) -> None:
     profile = make_profile()
     derived, _ = derive(profile, ruleset)
 
-    overridden = effective(derived, {"pacing": 1, "register": "formal"})
+    overridden = effective(derived, {"concreteness": 1, "register": "formal"})
     assert overridden != derived
 
     reverted = effective(derived, {})
@@ -31,9 +31,9 @@ def test_repository_override_sequence_leaves_derived_unaffected(
 
     derived_before, _ = derive(profile, ruleset)
 
-    repo.set(learner_id, {"pacing": 3})
+    repo.set(learner_id, {"concreteness": 5})
     repo.set(learner_id, {"register": "formal"})
-    repo.delete_field(learner_id, "pacing")
+    repo.delete_field(learner_id, "concreteness")
     repo.delete_all(learner_id)
 
     derived_after, _ = derive(profile, ruleset)

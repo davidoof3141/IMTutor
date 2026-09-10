@@ -12,7 +12,14 @@ from app.api.deps import (
 from app.core.constants import PARAMETER_NAMES
 from app.core.mapping import derive, effective
 from app.core.profile import Profile
-from app.core.vector import AssessmentFrequency, Attribution, ControlVector, Override, Register
+from app.core.vector import (
+    AssessmentFrequency,
+    Attribution,
+    ControlVector,
+    ExampleDomain,
+    Override,
+    Register,
+)
 from app.store.users import User
 
 router = APIRouter(prefix="/api/config", tags=["config"])
@@ -30,8 +37,8 @@ class OverrideRequest(BaseModel):
     explanation_depth: int | None = None
     example_density: int | None = None
     concreteness: int | None = None
+    example_domain: ExampleDomain | None = None
     register: Register | None = None
-    pacing: int | None = None
     assessment_frequency: AssessmentFrequency | None = None
 
     def as_sparse_dict(self) -> Override:

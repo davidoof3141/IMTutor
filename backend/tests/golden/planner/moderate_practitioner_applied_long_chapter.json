@@ -2,12 +2,33 @@
   "rationale": {
     "0": "explanation_depth=3",
     "1": "explanation_depth=3",
+    "10": "explanation_depth=3",
+    "11": "explanation_depth=3",
+    "12": "example_density=3",
+    "13": "assessment_frequency=every_second_topic",
+    "14": "explanation_depth=3",
+    "15": "explanation_depth=3",
+    "16": "example_density=3",
+    "17": "explanation_depth=3",
+    "18": "explanation_depth=3",
+    "19": "example_density=3",
     "2": "example_density=3",
+    "20": "assessment_frequency=every_second_topic",
+    "21": "explanation_depth=3",
+    "22": "explanation_depth=3",
+    "23": "example_density=3",
+    "24": "explanation_depth=3",
+    "25": "explanation_depth=3",
+    "26": "example_density=3",
+    "27": "assessment_frequency=every_second_topic",
+    "28": "always",
     "3": "explanation_depth=3",
     "4": "explanation_depth=3",
     "5": "example_density=3",
     "6": "assessment_frequency=every_second_topic",
-    "7": "always"
+    "7": "explanation_depth=3",
+    "8": "explanation_depth=3",
+    "9": "example_density=3"
   },
   "steps": [
     {
@@ -61,8 +82,155 @@
     },
     {
       "index": 7,
+      "kind": "explain",
+      "page_end": 153,
+      "page_start": 151,
+      "section_ref": "5.3"
+    },
+    {
+      "index": 8,
+      "kind": "explain",
+      "page_end": 153,
+      "page_start": 151,
+      "section_ref": "5.3"
+    },
+    {
+      "index": 9,
+      "kind": "example",
+      "page_end": 153,
+      "page_start": 151,
+      "section_ref": "5.3"
+    },
+    {
+      "index": 10,
+      "kind": "explain",
+      "page_end": 159,
+      "page_start": 154,
+      "section_ref": "5.4"
+    },
+    {
+      "index": 11,
+      "kind": "explain",
+      "page_end": 159,
+      "page_start": 154,
+      "section_ref": "5.4"
+    },
+    {
+      "index": 12,
+      "kind": "example",
+      "page_end": 159,
+      "page_start": 154,
+      "section_ref": "5.4"
+    },
+    {
+      "index": 13,
+      "kind": "checkpoint",
+      "page_end": 159,
+      "page_start": 151,
+      "section_ref": "5.4"
+    },
+    {
+      "index": 14,
+      "kind": "explain",
+      "page_end": 167,
+      "page_start": 160,
+      "section_ref": "5.5"
+    },
+    {
+      "index": 15,
+      "kind": "explain",
+      "page_end": 167,
+      "page_start": 160,
+      "section_ref": "5.5"
+    },
+    {
+      "index": 16,
+      "kind": "example",
+      "page_end": 167,
+      "page_start": 160,
+      "section_ref": "5.5"
+    },
+    {
+      "index": 17,
+      "kind": "explain",
+      "page_end": 176,
+      "page_start": 168,
+      "section_ref": "5.6"
+    },
+    {
+      "index": 18,
+      "kind": "explain",
+      "page_end": 176,
+      "page_start": 168,
+      "section_ref": "5.6"
+    },
+    {
+      "index": 19,
+      "kind": "example",
+      "page_end": 176,
+      "page_start": 168,
+      "section_ref": "5.6"
+    },
+    {
+      "index": 20,
+      "kind": "checkpoint",
+      "page_end": 176,
+      "page_start": 160,
+      "section_ref": "5.6"
+    },
+    {
+      "index": 21,
+      "kind": "explain",
+      "page_end": 183,
+      "page_start": 177,
+      "section_ref": "5.7"
+    },
+    {
+      "index": 22,
+      "kind": "explain",
+      "page_end": 183,
+      "page_start": 177,
+      "section_ref": "5.7"
+    },
+    {
+      "index": 23,
+      "kind": "example",
+      "page_end": 183,
+      "page_start": 177,
+      "section_ref": "5.7"
+    },
+    {
+      "index": 24,
+      "kind": "explain",
+      "page_end": 192,
+      "page_start": 184,
+      "section_ref": "5.8"
+    },
+    {
+      "index": 25,
+      "kind": "explain",
+      "page_end": 192,
+      "page_start": 184,
+      "section_ref": "5.8"
+    },
+    {
+      "index": 26,
+      "kind": "example",
+      "page_end": 192,
+      "page_start": 184,
+      "section_ref": "5.8"
+    },
+    {
+      "index": 27,
+      "kind": "checkpoint",
+      "page_end": 192,
+      "page_start": 177,
+      "section_ref": "5.8"
+    },
+    {
+      "index": 28,
       "kind": "recap",
-      "page_end": 150,
+      "page_end": 192,
       "page_start": 135,
       "section_ref": "5"
     }

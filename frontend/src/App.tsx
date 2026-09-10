@@ -86,6 +86,20 @@ function App() {
     setLesson(null);
   }
 
+  // A different chapter/section (or mode) means a different lesson: start a
+  // fresh thread so the previous lesson's chat doesn't bleed into the new one.
+  // Wraps the raw setStudyMode passed to the curriculum picker; the initial
+  // getStudyMode load and the mode toggle use setStudyMode directly.
+  function handleSelectionChange(next: StudyModeState) {
+    const changed =
+      !studyMode ||
+      next.mode !== studyMode.mode ||
+      next.chapter_number !== studyMode.chapter_number ||
+      next.section_number !== studyMode.section_number;
+    setStudyMode(next);
+    if (changed) openConversation(null);
+  }
+
   function toggleScheduleCollapsed() {
     setScheduleCollapsed((collapsed) => {
       const next = !collapsed;
@@ -350,7 +364,7 @@ function App() {
               learnerId={learnerId}
               curriculum={curriculum}
               studyMode={studyMode}
-              onStudyModeChange={setStudyMode}
+              onStudyModeChange={handleSelectionChange}
               collapsed={scheduleCollapsed}
               onToggleCollapsed={toggleScheduleCollapsed}
             />

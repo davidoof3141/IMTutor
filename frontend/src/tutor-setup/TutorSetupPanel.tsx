@@ -57,18 +57,40 @@ const PARAMS: ParamMeta[] = [
     labels: ["Sehr abstrakt", "Abstrakt", "Ausgewogen", "Konkret", "Sehr konkret"],
   },
   {
+    key: "example_domain",
+    name: "Branche der Beispiele",
+    blurb: "Aus welcher Branche der Tutor seine Beispiele wählt.",
+    options: [
+      "manufacturing",
+      "finance",
+      "public_sector",
+      "healthcare",
+      "retail",
+      "it_software",
+      "logistics",
+      "energy",
+      "consulting",
+      "neutral",
+    ],
+    labels: [
+      "Fertigung & Industrie",
+      "Banken & Versicherungen",
+      "Öffentliche Verwaltung",
+      "Gesundheitswesen",
+      "Handel & E-Commerce",
+      "IT & Software",
+      "Logistik & Transport",
+      "Energie & Versorgung",
+      "Beratung & Dienstleistung",
+      "Branchenneutral",
+    ],
+  },
+  {
     key: "register",
     name: "Ton",
     blurb: "Wie förmlich die Sprache des Tutors ist.",
     options: ["formal", "neutral", "informal"],
     labels: ["Förmlich", "Neutral", "Locker"],
-  },
-  {
-    key: "pacing",
-    name: "Tempo",
-    blurb: "Wie viele neue Themen der Tutor pro Woche einführt.",
-    options: [1, 2, 3],
-    labels: ["1 Thema/Woche", "2 Themen/Woche", "3 Themen/Woche"],
   },
   {
     key: "assessment_frequency",
@@ -83,7 +105,7 @@ const PROFILE_FIELDS: { key: keyof ConfigResponse["profile"]; label: string }[] 
   { key: "role", label: "Du bist" },
   { key: "prior_experience", label: "Dein Vorwissen" },
   { key: "goal", label: "Dein Ziel" },
-  { key: "study_time", label: "Zeit pro Woche" },
+  { key: "industry", label: "Deine Branche" },
   { key: "learner_type", label: "Dein Lerntyp" },
 ];
 
@@ -98,9 +120,16 @@ const PROFILE_WORDS: Record<string, string> = {
   certification: "Zertifikat bestehen",
   applied_competence: "Anwendung im Beruf",
   orientation: "Überblick gewinnen",
-  under_2h: "Unter 2 Std.",
-  "2_to_4h": "2–4 Std.",
-  over_4h: "Über 4 Std.",
+  manufacturing: "Fertigung & Industrie",
+  finance: "Banken & Versicherungen",
+  public_sector: "Öffentliche Verwaltung",
+  healthcare: "Gesundheitswesen",
+  retail: "Handel & E-Commerce",
+  it_software: "IT & Software",
+  logistics: "Logistik & Transport",
+  energy: "Energie & Versorgung",
+  consulting: "Beratung & Dienstleistung",
+  neutral: "Branchenneutral",
   visuell: "Visuell",
   auditiv: "Auditiv",
   kommunikativ: "Kommunikativ",
@@ -112,7 +141,7 @@ const FIELD_WORDS: Record<string, string> = {
   role: "Rolle",
   prior_experience: "Vorwissen",
   goal: "Ziel",
-  study_time: "Lernzeit pro Woche",
+  industry: "Branche",
   learner_type: "Lerntyp",
 };
 
@@ -120,14 +149,25 @@ function profileWord(value: string): string {
   return PROFILE_WORDS[value] ?? value;
 }
 
+/** Die Auslöse-Bedingungen einer Regel als kompakte Liste lesbarer Angaben. */
+function ruleConditions(rule: Rule): string {
+  return Object.entries(rule.when)
+    .map(([field, values]) => {
+      const word = FIELD_WORDS[field] ?? field.replace(/_/g, " ");
+      return `${word}: ${values.map(profileWord).join(" oder ")}`;
+    })
+    .join("; ");
+}
+
 /** Macht aus der Auslöse-Bedingung einer Regel einen lesbaren Satz. */
 function whyFromRule(rule: Rule): string {
-  const parts = Object.entries(rule.when).map(([field, values]) => {
-    const word = FIELD_WORDS[field] ?? field.replace(/_/g, " ");
-    const readable = values.map(profileWord).join(" oder ");
-    return `${word}: ${readable}`;
-  });
-  return `Ergibt sich aus deinen Angaben — ${parts.join("; ")}.`;
+  return `Ergibt sich aus deinen Angaben — ${ruleConditions(rule)}.`;
+}
+
+/** Verständliches Wort für einen Parameterwert, aus `meta.labels`. */
+function paramValueLabel(meta: ParamMeta, value: string | number): string {
+  const i = meta.options.findIndex((o) => String(o) === String(value));
+  return i >= 0 ? meta.labels[i] : String(value);
 }
 
 export function TutorSetupPanel({ config, learnerId, onConfigChange, lesson }: Props) {
@@ -182,7 +222,7 @@ export function TutorSetupPanel({ config, learnerId, onConfigChange, lesson }: P
     <div className="panel setup-panel">
       <h2>So ist dein Tutor eingestellt</h2>
       <p className="setup-intro">
-        Jede Einstellung unten ergibt sich aus den vier Fragen, die du am Anfang beantwortet hast.
+        Jede Einstellung unten ergibt sich aus den fünf Fragen, die du am Anfang beantwortet hast.
         Du kannst alles ändern — der Tutor übernimmt es sofort, und „Auf Vorschlag zurücksetzen“
         stellt den Ausgangswert wieder her.
       </p>
@@ -384,6 +424,45 @@ export function TutorSetupPanel({ config, learnerId, onConfigChange, lesson }: P
                 </tbody>
               </table>
             </>
+          )}
+        </div>
+        <div className="setup-section">
+          <h3>Wie deine Angaben die Einstellungen ergeben</h3>
+          <table className="mapping-table">
+            <tbody>
+              {PARAMS.map((meta) => {
+                const ruleId = config.attribution[meta.key];
+                const fromRule = ruleId !== "default";
+                const rule = rules.find((r) => r.id === ruleId);
+                return (
+                  <tr key={meta.key}>
+                    <td>
+                      <span className="mapping-param">{meta.name}</span>
+                      <span className="mapping-value">
+                        {paramValueLabel(meta, config.derived[meta.key])}
+                      </span>
+                    </td>
+                    <td>
+                      {fromRule ? (
+                        <>
+                          <span>{rule ? ruleConditions(rule) : "—"}</span>
+                          <span className="mapping-rule">{ruleId}</span>
+                        </>
+                      ) : (
+                        <span className="muted-note">
+                          Standard — keine deiner Angaben hat diesen Wert verändert
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          {rules.length === 0 && (
+            <p className="muted-note">
+              Der Regeltext konnte nicht geladen werden — die Bedingungen bleiben ausgeblendet.
+            </p>
           )}
         </div>
         <div className="setup-section">

@@ -10,7 +10,7 @@ def _onboard(client: TestClient, **overrides: str) -> dict:
         "role": "practitioner",
         "prior_experience": "low",
         "goal": "certification",
-        "study_time": "under_2h",
+        "industry": "healthcare",
         "learner_type": "visuell",
     }
     body.update(overrides)
@@ -230,7 +230,7 @@ def test_plan_is_immutable_across_overrides_and_advances(
     original_vector = created["plan"]["vector_snapshot"]
 
     r = client.put(
-        f"/api/config/{learner_id}/override", json={"pacing": 1, "explanation_depth": 5}
+        f"/api/config/{learner_id}/override", json={"concreteness": 1, "explanation_depth": 5}
     )
     assert r.status_code == 200
 

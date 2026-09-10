@@ -13,7 +13,7 @@ import type {
   Role,
   PriorExperience,
   Goal,
-  StudyTime,
+  Industry,
   LearnerType,
   RulesResponse,
   StudyModeState,
@@ -148,7 +148,7 @@ export function onboard(answers: {
   role: Role;
   prior_experience: PriorExperience;
   goal: Goal;
-  study_time: StudyTime;
+  industry: Industry;
   learner_type: LearnerType;
 }): Promise<OnboardingResponse> {
   return request("/api/onboarding", { method: "POST", body: JSON.stringify(answers) });
@@ -317,10 +317,13 @@ export function getBookPdfObjectUrl(): Promise<string> {
   return bookPdfObjectUrl;
 }
 
-/** Generates a fresh chapter/section overview for the learner's current
- * training-mode selection. Not persisted anywhere -- call again whenever the
- * selection changes; discard the result once real messages exist. */
-export function getChapterIntro(learnerId: string): Promise<{ text: string }> {
+/** The pre-generated chapter/section overview and starter questions for the
+ * learner's current training-mode selection. A static lookup -- call again
+ * whenever the selection changes. `starters` is empty for selections whose
+ * manifest entry predates starter questions. */
+export function getChapterIntro(
+  learnerId: string,
+): Promise<{ text: string; starters: string[] }> {
   return request(`/api/chapter-intro/${learnerId}`);
 }
 

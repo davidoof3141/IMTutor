@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS profiles (
     role TEXT NOT NULL,
     prior_experience TEXT NOT NULL,
     goal TEXT NOT NULL,
-    study_time TEXT NOT NULL,
+    industry TEXT NOT NULL,
     learner_type TEXT NOT NULL,
     ruleset_version TEXT NOT NULL,
     created_at TEXT NOT NULL
@@ -72,6 +72,21 @@ CREATE TABLE IF NOT EXISTS profiles (
 -- default only backfills old rows; every new insert passes an explicit
 -- value (learner_type has no default at the application layer).
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS learner_type TEXT NOT NULL DEFAULT 'kommunikativ';
+
+-- industry replaced study_time in onboarding. Old rows backfill to
+-- 'neutral' (branchenneutral), which is also the rule set's default
+-- example_domain, so a pre-existing profile keeps the prompt it had.
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS industry TEXT NOT NULL DEFAULT 'neutral';
+-- study_time is no longer written; kept (nullable) rather than dropped so the
+-- column's history survives for anyone analysing older cohorts. Guarded
+-- because a database created after this change has no such column at all,
+-- and ALTER COLUMN has no IF EXISTS form.
+DO $$
+BEGIN
+    ALTER TABLE profiles ALTER COLUMN study_time DROP NOT NULL;
+EXCEPTION
+    WHEN undefined_column THEN NULL;
+END $$;
 
 CREATE TABLE IF NOT EXISTS overrides (
     learner_id TEXT NOT NULL,

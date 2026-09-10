@@ -4,8 +4,8 @@ defaults:
   explanation_depth: 3
   example_density: 3
   concreteness: 3
+  example_domain: neutral
   register: neutral
-  pacing: 2
   assessment_frequency: every_second_topic
 
 rules:
@@ -32,22 +32,66 @@ rules:
   - id: goal_certification
     priority: 8
     when: { goal: certification }
-    set: { assessment_frequency: every_topic, pacing: 3 }
+    set: { assessment_frequency: every_topic }
 
   - id: goal_orientation
     priority: 8
     when: { goal: orientation }
-    set: { assessment_frequency: on_request, pacing: 1 }
+    set: { assessment_frequency: on_request }
 
-  - id: study_time_low
-    priority: 6
-    when: { study_time: under_2h }
-    set: { pacing: 1 }
+  # Branche -> Beispielwelt. A deliberate 1:1 pass-through rather than reading
+  # profile.industry straight into the prompt: routing it through the rule set
+  # keeps example_domain overridable and attributable like every other
+  # parameter, so a learner can switch example world without re-onboarding.
+  - id: industry_manufacturing
+    priority: 10
+    when: { industry: manufacturing }
+    set: { example_domain: manufacturing }
 
-  - id: study_time_high
-    priority: 6
-    when: { study_time: over_4h }
-    set: { pacing: 3 }
+  - id: industry_finance
+    priority: 10
+    when: { industry: finance }
+    set: { example_domain: finance }
+
+  - id: industry_public_sector
+    priority: 10
+    when: { industry: public_sector }
+    set: { example_domain: public_sector }
+
+  - id: industry_healthcare
+    priority: 10
+    when: { industry: healthcare }
+    set: { example_domain: healthcare }
+
+  - id: industry_retail
+    priority: 10
+    when: { industry: retail }
+    set: { example_domain: retail }
+
+  - id: industry_it_software
+    priority: 10
+    when: { industry: it_software }
+    set: { example_domain: it_software }
+
+  - id: industry_logistics
+    priority: 10
+    when: { industry: logistics }
+    set: { example_domain: logistics }
+
+  - id: industry_energy
+    priority: 10
+    when: { industry: energy }
+    set: { example_domain: energy }
+
+  - id: industry_consulting
+    priority: 10
+    when: { industry: consulting }
+    set: { example_domain: consulting }
+
+  - id: industry_neutral
+    priority: 10
+    when: { industry: neutral }
+    set: { example_domain: neutral }
 
   - id: exp_moderate_practitioner_depth
     priority: 15
@@ -73,3 +117,21 @@ rules:
     priority: 10
     when: { learner_type: motorisch }
     set: { example_density: 5, concreteness: 5 }
+
+  # --- Explicit "neutral middle" rules -------------------------------------
+  # "Analyst:in" and "mittel" are the balanced midpoints of their questions;
+  # left alone they'd fall through to the defaults and the mapping table would
+  # show "Standard". These rules state that outcome explicitly so the learner
+  # sees the answer as the reason. They set exactly the default values, and are
+  # declared LAST on purpose: on a same-priority tie the earlier-declared rule
+  # wins (see core/mapping.py), so any role_*/exp_*/learner_* rule that also
+  # writes the field still takes precedence -- these only fill the gap.
+  - id: role_analyst
+    priority: 10
+    when: { role: analyst }
+    set: { concreteness: 3, register: neutral }
+
+  - id: exp_moderate
+    priority: 10
+    when: { prior_experience: moderate }
+    set: { explanation_depth: 3, example_density: 3 }

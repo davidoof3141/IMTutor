@@ -27,15 +27,22 @@ clauses:
     4: "Bevorzuge konkrete, szenariobasierte Veranschaulichungen gegenüber abstrakten Definitionen."
     5: "Verankere jede Erklärung in einem konkreten, realistischen Praxisszenario."
 
+  example_domain:
+    manufacturing: "Wähle alle Beispiele aus der Fertigungsindustrie: Produktionsplanung, Werksstandorte, ERP- und MES-Systeme, Lieferketten."
+    finance: "Wähle alle Beispiele aus der Finanzbranche: Banken und Versicherungen, Kernbankensysteme, aufsichtsrechtliche Meldepflichten, Zahlungsverkehr."
+    public_sector: "Wähle alle Beispiele aus der öffentlichen Verwaltung: Behörden und Fachverfahren, Vergaberecht, E-Government und Bürgerdienste."
+    healthcare: "Wähle alle Beispiele aus dem Gesundheitswesen: Kliniken, Praxen und Kostenträger, Krankenhausinformationssysteme, Patientendaten."
+    retail: "Wähle alle Beispiele aus Handel und E-Commerce: Filial- und Onlinegeschäft, Warenwirtschaft, Kassensysteme, Sortiments- und Kundendaten."
+    it_software: "Wähle alle Beispiele aus der IT- und Softwarebranche: Softwarehäuser und IT-Dienstleister, Entwicklungs- und Betriebsprozesse, Cloud-Plattformen."
+    logistics: "Wähle alle Beispiele aus Logistik und Transport: Speditionen, Lager und Umschlag, Transportmanagementsysteme, Sendungsverfolgung."
+    energy: "Wähle alle Beispiele aus der Energie- und Versorgungswirtschaft: Netzbetrieb, Zählerdaten und Abrechnung, Leitsysteme, regulatorische Auflagen."
+    consulting: "Wähle alle Beispiele aus Beratung und Dienstleistung: Projektgeschäft, Mandanten- und Auslastungssteuerung, Wissensmanagement."
+    neutral: "Wähle die Beispiele branchenübergreifend und ohne festen Branchenbezug; verwende allgemeine Unternehmensszenarien."
+
   register:
     formal: "Verwende ein förmliches Register: ganze Sätze, keine Umgangssprache, präzise Terminologie."
     neutral: "Verwende ein neutrales, professionelles Register."
     informal: "Verwende ein lockeres, umgangssprachliches Register."
-
-  pacing:
-    1: "Führe höchstens ein neues Thema pro Woche ein; festige es, bevor du weitergehst."
-    2: "Führe bis zu zwei neue Themen pro Woche ein."
-    3: "Führe bis zu drei neue Themen pro Woche ein."
 
   assessment_frequency:
     every_topic: "Biete nach jedem Thema ein kurzes Quiz an."

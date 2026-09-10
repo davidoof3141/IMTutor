@@ -24,7 +24,7 @@ class ProfileRepository:
             self._conn.execute(
                 """
                 INSERT INTO profiles
-                    (learner_id, user_id, role, prior_experience, goal, study_time,
+                    (learner_id, user_id, role, prior_experience, goal, industry,
                      learner_type, ruleset_version, created_at)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
@@ -34,7 +34,7 @@ class ProfileRepository:
                     profile.role,
                     profile.prior_experience,
                     profile.goal,
-                    profile.study_time,
+                    profile.industry,
                     profile.learner_type,
                     profile.ruleset_version,
                     profile.created_at.isoformat(),
@@ -57,7 +57,7 @@ class ProfileRepository:
             role=row["role"],
             prior_experience=row["prior_experience"],
             goal=row["goal"],
-            study_time=row["study_time"],
+            industry=row["industry"],
             learner_type=row["learner_type"],
             ruleset_version=row["ruleset_version"],
             created_at=row["created_at"],

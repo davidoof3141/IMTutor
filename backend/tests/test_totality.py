@@ -2,20 +2,20 @@ from app.core.mapping import derive
 from app.core.rules import RuleSet
 from tests.conftest import (
     GOALS,
+    INDUSTRIES,
     LEARNER_TYPES,
     PRIOR_EXPERIENCES,
     ROLES,
-    STUDY_TIMES,
     all_profiles,
 )
 
 
-def test_full_profile_space_is_432() -> None:
+def test_full_profile_space_is_1440() -> None:
     assert (
-        len(ROLES) * len(PRIOR_EXPERIENCES) * len(GOALS) * len(STUDY_TIMES) * len(LEARNER_TYPES)
-        == 432
+        len(ROLES) * len(PRIOR_EXPERIENCES) * len(GOALS) * len(INDUSTRIES) * len(LEARNER_TYPES)
+        == 1440
     )
-    assert len(all_profiles()) == 432
+    assert len(all_profiles()) == 1440
 
 
 def test_derive_is_total_over_full_profile_space(ruleset: RuleSet) -> None:

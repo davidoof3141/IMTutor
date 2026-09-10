@@ -14,9 +14,11 @@ import {
 } from "../api/client";
 import type { Attachment, BookImageRef, StudyModeState } from "../types";
 
-// Shown above the input before the learner has said anything -- fixed, not
-// personalized (the LLM only takes over once there's a real reply to base
-// follow-ups on; see `suggestions` state below).
+// Generic fallback shown above the input before the learner has said anything.
+// In training mode the chapter/section's own pre-generated starter questions
+// (from the intro manifest) are used instead; this is what's shown in free
+// exploration and if a manifest entry has no starters. The LLM only takes
+// over once there's a real reply to base follow-ups on (see `suggestions`).
 const STARTER_QUESTIONS = [
   "Kannst du mir das Thema kurz erklären?",
   "Welche Grundbegriffe sollte ich zuerst kennen?",
@@ -252,14 +254,18 @@ export function ChatPanel({
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(conversationId !== null);
   const [error, setError] = useState<string | null>(null);
-  // A chapter/section overview shown while the thread is still empty --
-  // fetched fresh whenever the training-mode selection changes, and never
-  // shown once a real message exists. Deliberately not part of `messages`:
-  // it never reaches the backend and never shows up in conversation
-  // history. Tagged with the selection it was fetched for, so a stale
-  // response for a since-abandoned chapter is never rendered -- render-time
-  // derivation instead of clearing it reactively (see `showChapterPreview`).
-  const [preview, setPreview] = useState<{ key: string; text: string } | null>(null);
+  // A chapter/section overview pinned above the thread in training mode --
+  // fetched fresh whenever the training-mode selection changes, and kept
+  // visible for the whole lesson (App starts a fresh thread when the
+  // selection changes, so it never outlives its chapter). Deliberately not
+  // part of `messages`: it never reaches the backend and never shows up in
+  // conversation history. Tagged with the selection it was fetched for, so a
+  // stale response for a since-abandoned chapter is never rendered --
+  // render-time derivation instead of clearing it reactively (see
+  // `introText`).
+  const [preview, setPreview] = useState<
+    { key: string; text: string; starters: string[] } | null
+  >(null);
   // Follow-up question chips shown above the input. [] once a send is in
   // flight (cleared alongside the draft) until the new reply's dynamic
   // batch arrives.
@@ -317,20 +323,21 @@ export function ChatPanel({
   // below never needs a synchronous state update of its own -- no branch
   // ever needs to "clear" `preview`, since a stale fetch just won't match
   // `previewKey` once the selection has moved on.
-  const showChapterPreview =
-    studyMode.mode === "training" && !!studyMode.chapter_number && messages.length === 0;
+  const inTrainingChapter = studyMode.mode === "training" && !!studyMode.chapter_number;
   const previewKey = `${studyMode.chapter_number ?? ""}:${studyMode.section_number ?? ""}`;
-  const previewText = showChapterPreview && preview?.key === previewKey ? preview.text : null;
+  const intro = inTrainingChapter && preview?.key === previewKey ? preview : null;
+  const introText = intro?.text ?? null;
 
   useEffect(() => {
-    // Wait for the resumed thread's real history to resolve first, so an
-    // about-to-be-non-empty thread doesn't flash the preview.
-    if (!showChapterPreview || loading) return;
+    // Wait for a resumed thread's real history to resolve first (purely so
+    // the fetch doesn't race an unmount); the intro stays pinned regardless
+    // of whether the thread has messages.
+    if (!inTrainingChapter || loading) return;
 
     let cancelled = false;
     getChapterIntro(learnerId)
       .then((r) => {
-        if (!cancelled) setPreview({ key: previewKey, text: r.text });
+        if (!cancelled) setPreview({ key: previewKey, text: r.text, starters: r.starters });
       })
       .catch(() => {
         // Best-effort -- the learner can still just start typing.
@@ -338,7 +345,7 @@ export function ChatPanel({
     return () => {
       cancelled = true;
     };
-  }, [learnerId, loading, showChapterPreview, previewKey]);
+  }, [learnerId, loading, inTrainingChapter, previewKey]);
 
   function appendToLastTutor(chunk: string) {
     setMessages((prev) => {
@@ -383,7 +390,6 @@ export function ChatPanel({
       { role: "learner", text, attachments },
       { role: "tutor", text: "" },
     ]);
-    setPreview(null);
     setSuggestions([]);
     setDraft("");
     setPendingAttachments([]);
@@ -441,7 +447,13 @@ export function ChatPanel({
     void sendMessage(question);
   }
 
-  const suggestionList = messages.length === 0 ? STARTER_QUESTIONS : suggestions;
+  function starterQuestions(): string[] {
+    if (!inTrainingChapter) return STARTER_QUESTIONS;
+    // Still fetching the intro: show nothing rather than flash the generic set.
+    if (!intro) return [];
+    return intro.starters.length > 0 ? intro.starters : STARTER_QUESTIONS;
+  }
+  const suggestionList = messages.length === 0 ? starterQuestions() : suggestions;
   const suggestionChips = suggestionList.length > 0 && (
     <div className="chat-suggestions">
       {suggestionList.map((question, i) => (
@@ -467,17 +479,18 @@ export function ChatPanel({
         {loading && (
           <p style={{ color: "var(--text-muted)", fontSize: 13 }}>Verlauf wird geladen …</p>
         )}
-        {!loading && previewText && (
-          <div className="chat-message tutor">
+        {!loading && introText && (
+          <div className="chat-message tutor chat-intro">
+            <span className="chat-intro-label">Einführung</span>
             <div className="markdown">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{previewText}</ReactMarkdown>
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{introText}</ReactMarkdown>
             </div>
           </div>
         )}
-        {!loading && showChapterPreview && !previewText && (
+        {!loading && inTrainingChapter && !introText && messages.length === 0 && (
           <p style={{ color: "var(--text-muted)", fontSize: 13 }}>Einführung wird geladen …</p>
         )}
-        {!loading && messages.length === 0 && !showChapterPreview && (
+        {!loading && messages.length === 0 && !inTrainingChapter && (
           <p style={{ color: "var(--text-muted)", fontSize: 13 }}>
             Stell dem Tutor eine Frage, um zu beginnen.
           </p>

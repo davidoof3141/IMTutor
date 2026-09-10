@@ -34,8 +34,8 @@ def _vector(**overrides: object) -> ControlVector:
         "explanation_depth": 3,
         "example_density": 3,
         "concreteness": 3,
+        "example_domain": "neutral",
         "register": "neutral",
-        "pacing": 3,
         "assessment_frequency": "every_topic",
     }
     base.update(overrides)
@@ -57,15 +57,14 @@ def test_chapter_with_no_sections_becomes_one_whole_chapter_unit(
     assert steps[-1].section_ref == "9"
 
 
-def test_pacing_beyond_chapter_length_is_capped_not_invented(planner_table: PlannerTable) -> None:
+def test_whole_chapter_lesson_covers_every_section(planner_table: PlannerTable) -> None:
     curriculum = [CHAPTER_THREE_SECTIONS]
     selection = CurriculumSelection(chapter_number="7")
 
-    steps, _ = plan_lesson(_vector(pacing=3), selection, curriculum, planner_table)
+    steps, _ = plan_lesson(_vector(), selection, curriculum, planner_table)
 
     covered = {s.section_ref for s in steps if s.kind in ("explain", "example", "checkpoint")}
-    assert covered <= {"7.1", "7.2", "7.3"}
-    assert len(covered) <= 3
+    assert covered == {"7.1", "7.2", "7.3"}
 
 
 def test_every_second_topic_checkpoint_after_pairs_plus_trailing_odd(
@@ -75,7 +74,7 @@ def test_every_second_topic_checkpoint_after_pairs_plus_trailing_odd(
     selection = CurriculumSelection(chapter_number="7")
 
     steps, _ = plan_lesson(
-        _vector(pacing=3, assessment_frequency="every_second_topic"),
+        _vector(assessment_frequency="every_second_topic"),
         selection,
         curriculum,
         planner_table,
@@ -97,7 +96,7 @@ def test_recap_section_ref_is_the_chapter_for_a_multi_section_lesson(
     curriculum = [CHAPTER_THREE_SECTIONS]
     selection = CurriculumSelection(chapter_number="7")
 
-    steps, rationale = plan_lesson(_vector(pacing=3), selection, curriculum, planner_table)
+    steps, rationale = plan_lesson(_vector(), selection, curriculum, planner_table)
 
     recap = steps[-1]
     assert recap.section_ref == "7"

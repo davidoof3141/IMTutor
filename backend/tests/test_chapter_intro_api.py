@@ -1,6 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
+from app.rag.chapter_intros import ChapterIntro
 from tests.conftest import make_learner
 
 
@@ -11,7 +12,7 @@ def _onboard(client: TestClient) -> dict:
             "role": "practitioner",
             "prior_experience": "low",
             "goal": "certification",
-            "study_time": "under_2h",
+            "industry": "healthcare",
             "learner_type": "visuell",
         },
     )
@@ -36,7 +37,7 @@ def _set_training_mode(
     assert r.status_code == 200, r.text
 
 
-def _stub_manifest(monkeypatch: pytest.MonkeyPatch, entries: dict[str, str]) -> None:
+def _stub_manifest(monkeypatch: pytest.MonkeyPatch, entries: dict[str, ChapterIntro]) -> None:
     monkeypatch.setattr("app.api.chapter_intro.load_chapter_intros", lambda: entries)
 
 
@@ -45,16 +46,52 @@ def test_chapter_intro_requires_training_mode_with_chapter(client: TestClient) -
     assert client.get(f"/api/chapter-intro/{learner_id}").status_code == 400
 
 
-def test_chapter_intro_returns_the_pre_generated_text_for_a_whole_chapter(
+def test_chapter_intro_returns_the_pre_generated_text_and_starters_for_a_whole_chapter(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    _stub_manifest(monkeypatch, {"1": "Willkommen im Kapitel!"})
+    _stub_manifest(
+        monkeypatch,
+        {
+            "1": ChapterIntro(
+                text="Willkommen im Kapitel!",
+                starters=("Was ist Informationsmanagement?", "Warum ist das wichtig?"),
+            )
+        },
+    )
     learner_id = _onboard(client)["profile"]["learner_id"]
     _set_training_mode(client, learner_id, chapter_number="1")
 
     r = client.get(f"/api/chapter-intro/{learner_id}")
     assert r.status_code == 200, r.text
-    assert r.json() == {"text": "Willkommen im Kapitel!"}
+    assert r.json() == {
+        "text": "Willkommen im Kapitel!",
+        "starters": ["Was ist Informationsmanagement?", "Warum ist das wichtig?"],
+    }
+
+
+def test_chapter_intro_starters_are_capped_at_three(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _stub_manifest(
+        monkeypatch,
+        {"1": ChapterIntro(text="x", starters=tuple(f"Frage {n}?" for n in range(5)))},
+    )
+    learner_id = _onboard(client)["profile"]["learner_id"]
+    _set_training_mode(client, learner_id, chapter_number="1")
+
+    starters = client.get(f"/api/chapter-intro/{learner_id}").json()["starters"]
+    assert starters == ["Frage 0?", "Frage 1?", "Frage 2?"]
+
+
+def test_chapter_intro_without_starters_returns_an_empty_list(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _stub_manifest(monkeypatch, {"1": ChapterIntro(text="Nur Text.")})
+    learner_id = _onboard(client)["profile"]["learner_id"]
+    _set_training_mode(client, learner_id, chapter_number="1")
+
+    r = client.get(f"/api/chapter-intro/{learner_id}")
+    assert r.json() == {"text": "Nur Text.", "starters": []}
 
 
 def test_chapter_intro_uses_the_chapter_colon_section_key_for_a_section(
@@ -66,7 +103,7 @@ def test_chapter_intro_uses_the_chapter_colon_section_key_for_a_section(
     section = chapter["sections"][0]
     _stub_manifest(
         monkeypatch,
-        {f"{chapter['number']}:{section['number']}": "Willkommen im Abschnitt!"},
+        {f"{chapter['number']}:{section['number']}": ChapterIntro(text="Willkommen im Abschnitt!")},
     )
     _set_training_mode(
         client, learner_id, chapter_number=chapter["number"], section_number=section["number"]
@@ -74,7 +111,7 @@ def test_chapter_intro_uses_the_chapter_colon_section_key_for_a_section(
 
     r = client.get(f"/api/chapter-intro/{learner_id}")
     assert r.status_code == 200, r.text
-    assert r.json() == {"text": "Willkommen im Abschnitt!"}
+    assert r.json() == {"text": "Willkommen im Abschnitt!", "starters": []}
 
 
 def test_chapter_intro_missing_from_manifest_is_404(
@@ -90,7 +127,7 @@ def test_chapter_intro_missing_from_manifest_is_404(
 def test_chapter_intro_is_a_static_lookup_no_conversation_or_turn_log_created(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    _stub_manifest(monkeypatch, {"1": "Willkommen im Kapitel!"})
+    _stub_manifest(monkeypatch, {"1": ChapterIntro(text="Willkommen im Kapitel!")})
     learner_id = _onboard(client)["profile"]["learner_id"]
     _set_training_mode(client, learner_id, chapter_number="1")
 

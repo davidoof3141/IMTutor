@@ -6,7 +6,20 @@ from pydantic import BaseModel, ConfigDict
 Role = Literal["practitioner", "analyst", "academic"]
 PriorExperience = Literal["none", "low", "moderate", "high"]
 Goal = Literal["certification", "applied_competence", "orientation"]
-StudyTime = Literal["under_2h", "2_to_4h", "over_4h"]
+# The learner's working context; decides which world the tutor's examples
+# are drawn from (maps to the example_domain control parameter).
+Industry = Literal[
+    "manufacturing",
+    "finance",
+    "public_sector",
+    "healthcare",
+    "retail",
+    "it_software",
+    "logistics",
+    "energy",
+    "consulting",
+    "neutral",
+]
 # Lerntyp (Vester): how the learner prefers to take in new material.
 LearnerType = Literal["visuell", "auditiv", "kommunikativ", "motorisch"]
 
@@ -25,7 +38,7 @@ class Profile(BaseModel):
     role: Role
     prior_experience: PriorExperience
     goal: Goal
-    study_time: StudyTime
+    industry: Industry
     learner_type: LearnerType
     ruleset_version: str
     created_at: datetime

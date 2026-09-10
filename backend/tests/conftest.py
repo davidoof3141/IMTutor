@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 
 from app.core.clauses import ClauseCatalogue, load_catalogue
 from app.core.planner import PlannerTable, load_planner_table
-from app.core.profile import Goal, LearnerType, PriorExperience, Profile, Role, StudyTime
+from app.core.profile import Goal, Industry, LearnerType, PriorExperience, Profile, Role
 from app.core.rules import RuleSet, load_ruleset
 from app.core.step_templates import StepTemplates, load_step_templates
 from app.rag.chunking import BOOK_PATH
@@ -152,7 +152,18 @@ def client(raw_client: TestClient) -> TestClient:
 ROLES: tuple[Role, ...] = ("practitioner", "analyst", "academic")
 PRIOR_EXPERIENCES: tuple[PriorExperience, ...] = ("none", "low", "moderate", "high")
 GOALS: tuple[Goal, ...] = ("certification", "applied_competence", "orientation")
-STUDY_TIMES: tuple[StudyTime, ...] = ("under_2h", "2_to_4h", "over_4h")
+INDUSTRIES: tuple[Industry, ...] = (
+    "manufacturing",
+    "finance",
+    "public_sector",
+    "healthcare",
+    "retail",
+    "it_software",
+    "logistics",
+    "energy",
+    "consulting",
+    "neutral",
+)
 LEARNER_TYPES: tuple[LearnerType, ...] = ("visuell", "auditiv", "kommunikativ", "motorisch")
 
 
@@ -185,7 +196,7 @@ def make_profile(
     role: Role = "practitioner",
     prior_experience: PriorExperience = "none",
     goal: Goal = "certification",
-    study_time: StudyTime = "under_2h",
+    industry: Industry = "neutral",
     learner_type: LearnerType = "kommunikativ",
     learner_id: str = "test-learner",
 ) -> Profile:
@@ -194,7 +205,7 @@ def make_profile(
         role=role,
         prior_experience=prior_experience,
         goal=goal,
-        study_time=study_time,
+        industry=industry,
         learner_type=learner_type,
         ruleset_version="v1",
         created_at=datetime(2026, 1, 1, tzinfo=UTC),
@@ -203,10 +214,12 @@ def make_profile(
 
 def all_profiles() -> list[Profile]:
     return [
-        make_profile(role=role, prior_experience=exp, goal=goal, study_time=study, learner_type=lt)
+        make_profile(
+            role=role, prior_experience=exp, goal=goal, industry=industry, learner_type=lt
+        )
         for role in ROLES
         for exp in PRIOR_EXPERIENCES
         for goal in GOALS
-        for study in STUDY_TIMES
+        for industry in INDUSTRIES
         for lt in LEARNER_TYPES
     ]

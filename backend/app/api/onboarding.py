@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from app.api.deps import AppState, Repos, get_current_user, get_repos, get_state
 from app.core.constants import CURRENT_RULESET_VERSION
 from app.core.mapping import derive
-from app.core.profile import Goal, LearnerType, PriorExperience, Profile, Role, StudyTime
+from app.core.profile import Goal, Industry, LearnerType, PriorExperience, Profile, Role
 from app.core.vector import Attribution, ControlVector
 from app.store.users import User
 
@@ -18,7 +18,7 @@ class OnboardingRequest(BaseModel):
     role: Role
     prior_experience: PriorExperience
     goal: Goal
-    study_time: StudyTime
+    industry: Industry
     learner_type: LearnerType
 
 
@@ -41,7 +41,7 @@ def onboard(
         role=body.role,
         prior_experience=body.prior_experience,
         goal=body.goal,
-        study_time=body.study_time,
+        industry=body.industry,
         learner_type=body.learner_type,
         ruleset_version=CURRENT_RULESET_VERSION,
         created_at=datetime.now(UTC),
