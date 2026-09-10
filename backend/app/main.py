@@ -1,3 +1,4 @@
+import logging
 import os
 import re
 from collections.abc import AsyncIterator
@@ -19,6 +20,7 @@ from app.api import (
     conversations,
     curriculum,
     export,
+    health,
     lesson,
     onboarding,
     planner,
@@ -34,6 +36,8 @@ from app.core.step_templates import StepTemplates, load_step_templates
 from app.rag.chunking import BOOK_PATH
 from app.rag.toc import extract_curriculum
 from app.store import db
+
+logger = logging.getLogger("app.main")
 
 RULES_DIR = Path(__file__).resolve().parents[1] / "rules"
 RULESET_FILENAME = re.compile(r"^ruleset\.(?P<version>.+)\.yaml$")
@@ -80,8 +84,15 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     load_dotenv()
     rulesets, catalogues = load_all_rulesets(RULES_DIR)
     planner_tables, step_templates = load_all_planner_tables(RULES_DIR)
-    db.init_db()  # create every table if missing
-    db.seed_superuser()  # ensure the .env superuser exists
+    # A serverless cold start can land while Neon's compute is still asleep or
+    # while DATABASE_URL is misconfigured. Don't let that take the whole API
+    # down -- log it and carry on; `db.ensure_schema()` retries on the first
+    # request that reaches the database, and /api/health reports the state.
+    try:
+        db.init_db()  # create every table if missing
+        db.seed_superuser()  # ensure the .env superuser exists
+    except Exception:
+        logger.exception("database unavailable at startup; deferring schema init")
     app.state.itm = AppState(
         rulesets=rulesets,
         catalogues=catalogues,
@@ -109,6 +120,7 @@ app.add_middleware(
     expose_headers=["X-Conversation-Id", "X-Book-Image-Ids", "X-Book-Reference-Pages"],
 )
 
+app.include_router(health.router)
 app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(onboarding.router)

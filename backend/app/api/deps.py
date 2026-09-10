@@ -14,7 +14,7 @@ from app.rag.toc import Chapter
 from app.security import decode_token
 from app.store.attachments import AttachmentRepository
 from app.store.conversations import ConversationRepository
-from app.store.db import connection
+from app.store.db import connection, ensure_schema
 from app.store.lessons import LessonRepository
 from app.store.overrides import OverrideRepository
 from app.store.profiles import ProfileRepository
@@ -55,6 +55,7 @@ class Repos:
 
 def get_repos() -> Iterator[Repos]:
     """Borrows one pooled Postgres connection for the duration of the request."""
+    ensure_schema()  # no-op after the first request that reaches the database
     with connection() as conn:
         yield Repos(
             profiles=ProfileRepository(conn),

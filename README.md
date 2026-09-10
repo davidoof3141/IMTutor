@@ -50,6 +50,13 @@ Routing: the root [vercel.json](vercel.json) rewrites `/api/*` to the backend
 service and everything else to the frontend service, so both are served from
 the same domain and the frontend can call the API same-origin in production.
 
+Health: `GET /api/health` returns `{"status": "ok", "database": "ok"}` (HTTP
+200) when the database is reachable, or `{"status": "degraded", "database":
+"error: ..."}` (HTTP 503) when it is not. The backend also boots even if the
+database is unreachable at cold start (Neon compute asleep, bad
+`DATABASE_URL`) instead of dark-404ing every route -- schema creation retries
+on the first request that reaches the database.
+
 ## Local development
 
 `docker-compose.yml` runs the same three roles as separate containers instead

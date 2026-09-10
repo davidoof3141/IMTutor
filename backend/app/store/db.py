@@ -1,22 +1,36 @@
 """Postgres connection pool and schema.
 
 The whole app talks to one Postgres database via a process-wide connection
-pool. Schema is created once at startup (`init_db`) rather than per request --
-every table lives in `_SCHEMA` below, `CREATE TABLE IF NOT EXISTS` so a restart
-against an existing database is a no-op.
+pool. Schema is created once (`ensure_schema`) rather than per request -- every
+table lives in `_SCHEMA` below, `CREATE TABLE IF NOT EXISTS` so running it again
+against an existing database is a no-op. Startup tries it once; if the database
+is unreachable then (Neon compute asleep, bad `DATABASE_URL`), the first request
+that does reach the database runs it instead, so a cold start against a sleeping
+DB no longer dark-404s the whole API.
 """
 
+import logging
 import os
 from collections.abc import Iterator
 from contextlib import contextmanager
 
 import psycopg
+from psycopg.conninfo import conninfo_to_dict, make_conninfo
 from psycopg.rows import DictRow, dict_row
 from psycopg_pool import ConnectionPool
+
+logger = logging.getLogger("app.db")
 
 Conn = psycopg.Connection[DictRow]
 
 DEFAULT_DATABASE_URL = "postgresql://itm:itm@localhost:5432/itm_tutor"
+
+# psycopg_pool raises PoolTimeout with this generic message whenever it can't
+# hand out a connection -- the real reason (auth failure, TLS rejection, host
+# unreachable) is swallowed by its background worker. Keep the wait short so a
+# request against a down database fails fast instead of hanging for 30s.
+_POOL_TIMEOUT = float(os.environ.get("DB_POOL_TIMEOUT", "10"))
+_CONNECT_TIMEOUT = int(os.environ.get("DB_CONNECT_TIMEOUT", "10"))
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS users (
@@ -194,10 +208,29 @@ CREATE TABLE IF NOT EXISTS rate_limits (
 """
 
 _pool: "ConnectionPool[Conn] | None" = None
+_schema_ready = False
+
+
+_LOCAL_HOSTS = {"", "localhost", "127.0.0.1", "::1", "db"}
 
 
 def database_url() -> str:
-    return os.environ.get("DATABASE_URL", DEFAULT_DATABASE_URL)
+    """The configured URL, with `sslmode=require` forced for remote hosts.
+
+    Neon (and every hosted Postgres) refuses plaintext connections; a URL that
+    omits `sslmode` is a common cause of connections that only fail once
+    deployed. Local/compose databases are left untouched.
+    """
+    url = os.environ.get("DATABASE_URL", DEFAULT_DATABASE_URL)
+    try:
+        params = conninfo_to_dict(url)
+    except psycopg.ProgrammingError:
+        return url  # let psycopg surface the parse error itself
+    host = str(params.get("host", ""))
+    is_local = host in _LOCAL_HOSTS or host.startswith("/")  # "/" -> unix socket
+    if is_local or "sslmode" in params:
+        return url
+    return make_conninfo(url, sslmode="require")
 
 
 def get_pool() -> "ConnectionPool[Conn]":
@@ -208,8 +241,12 @@ def get_pool() -> "ConnectionPool[Conn]":
             database_url(),
             min_size=1,
             max_size=10,
+            timeout=_POOL_TIMEOUT,
             connection_class=psycopg.Connection[DictRow],
-            kwargs={"row_factory": dict_row},
+            kwargs={"row_factory": dict_row, "connect_timeout": _CONNECT_TIMEOUT},
+            # Neon (and any pooler) drops idle server connections; without a
+            # check the pool can hand out a dead one after the compute slept.
+            check=ConnectionPool.check_connection,
             open=True,
         )
     return _pool
@@ -217,10 +254,11 @@ def get_pool() -> "ConnectionPool[Conn]":
 
 def reset_pool() -> None:
     """Close the pool so the next `get_pool()` reconnects. Used by tests."""
-    global _pool
+    global _pool, _schema_ready
     if _pool is not None:
         _pool.close()
         _pool = None
+    _schema_ready = False
 
 
 @contextmanager
@@ -231,10 +269,25 @@ def connection() -> Iterator[Conn]:
 
 
 def init_db() -> None:
-    """Create every table if it does not exist. Safe to run on every startup."""
+    """Create every table if it does not exist. Safe to run repeatedly."""
+    global _schema_ready
     with connection() as conn:
         conn.execute(_SCHEMA)
         conn.commit()
+    _schema_ready = True
+
+
+def ensure_schema() -> None:
+    """Run schema + superuser setup once per process, on the first call that
+    reaches the DB.
+
+    Startup does this too, but tolerates failure (see `main.lifespan`); this is
+    the retry path for a process that booted while the database was down.
+    """
+    if _schema_ready:
+        return
+    init_db()
+    seed_superuser()
 
 
 def seed_superuser() -> None:
