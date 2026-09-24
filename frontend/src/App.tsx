@@ -1,13 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ApiError,
   abandonLesson,
   advanceLesson,
+  consumeLoginLinkFromUrl,
   createLesson,
   getConfig,
   getCurriculum,
   getLesson,
   getStudyMode,
+  hasPendingLoginLink,
   listConversations,
   updateStudyMode,
 } from "./api/client";
@@ -46,6 +48,35 @@ function App() {
   const { model: chatModel, setModel: setChatModel } = useChatModel();
   const auth = useAuth();
 
+  // A magic-link visit (?login_link=...) signs the visitor in before anything
+  // else renders; "checking" briefly shows the splash instead of a flash of
+  // the login screen while that request is in flight. The presence check is
+  // read-only (safe during render); consuming the token rewrites the URL and
+  // must happen exactly once, guarded against StrictMode's double effect.
+  const [linkLogin, setLinkLogin] = useState<"idle" | "checking" | "failed">(() =>
+    hasPendingLoginLink() ? "checking" : "idle",
+  );
+  const [linkLoginError, setLinkLoginError] = useState<string | null>(null);
+  const linkConsumedRef = useRef(false);
+
+  useEffect(() => {
+    if (linkConsumedRef.current) return;
+    linkConsumedRef.current = true;
+    const token = consumeLoginLinkFromUrl();
+    if (!token) return;
+    auth
+      .loginWithLink(token)
+      .then(() => setLinkLogin("idle"))
+      .catch((err) => {
+        setLinkLogin("failed");
+        setLinkLoginError(
+          err instanceof ApiError ? err.message : "Der Server ist nicht erreichbar.",
+        );
+      });
+    // Runs once on mount to consume the token from the initial URL only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const [config, setConfig] = useState<ConfigResponse | null>(null);
   const [curriculum, setCurriculum] = useState<Chapter[]>([]);
   const [studyMode, setStudyMode] = useState<StudyModeState | null>(null);
@@ -75,6 +106,9 @@ function App() {
 
   const learnerId = auth.learnerId;
   const isAdmin = auth.user?.role === "admin";
+  // Link-invited accounts take part in the personalized-vs-generic chat
+  // comparison instead of getting a single reply per turn.
+  const dualMode = auth.user?.has_login_link ?? false;
 
   function openConversation(id: string | null) {
     setActiveConversationId(id);
@@ -241,7 +275,7 @@ function App() {
     });
   }
 
-  if (auth.status === "loading") {
+  if (auth.status === "loading" || linkLogin === "checking") {
     return <div className="app-splash" aria-busy="true" />;
   }
 
@@ -252,6 +286,7 @@ function App() {
         onToggleTheme={toggleTheme}
         onLogin={auth.login}
         onRegister={auth.register}
+        linkError={linkLogin === "failed" ? linkLoginError : null}
       />
     );
   }
@@ -391,6 +426,7 @@ function App() {
             model={chatModel}
             studyMode={studyMode}
             conversationId={activeConversationId}
+            dualMode={dualMode}
             onConversationResolved={setActiveConversationId}
             onNewConversation={() => openConversation(null)}
             newConversationDisabled={activeConversationId === null}

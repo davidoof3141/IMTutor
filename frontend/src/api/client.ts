@@ -1,4 +1,5 @@
 import type {
+  AdminStats,
   Attachment,
   BookImageRef,
   ConfigResponse,
@@ -6,6 +7,7 @@ import type {
   ConversationMessage,
   CurriculumResponse,
   LessonResponse,
+  LinkUserResponse,
   LoginResponse,
   MeResponse,
   OnboardingResponse,
@@ -15,12 +17,14 @@ import type {
   Goal,
   Industry,
   LearnerType,
+  ReasonTag,
   RulesResponse,
   StudyModeState,
   TurnLogRecord,
   User,
   UserRole,
   UserStatus,
+  VariantLabel,
 } from "../types";
 
 export const BASE_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:8000").replace(
@@ -102,6 +106,36 @@ export function getMe(): Promise<MeResponse> {
   return request("/api/auth/me");
 }
 
+export function loginWithLink(token: string): Promise<LoginResponse> {
+  return request("/api/auth/login-link", {
+    method: "POST",
+    body: JSON.stringify({ token }),
+  });
+}
+
+const LOGIN_LINK_PARAM = "login_link";
+
+/** Turns a raw link token into the full URL a learner opens to sign in. */
+export function buildLoginLinkUrl(token: string): string {
+  return `${window.location.origin}/?${LOGIN_LINK_PARAM}=${encodeURIComponent(token)}`;
+}
+
+/** Side-effect-free check for a pending login-link token, safe to call during
+ * render (e.g. as a `useState` initializer) to decide the first paint. */
+export function hasPendingLoginLink(): boolean {
+  return new URLSearchParams(window.location.search).has(LOGIN_LINK_PARAM);
+}
+
+/** Reads and strips the login-link token from the current URL, if present.
+ * Has a side effect (rewrites the URL) -- call it at most once, from an
+ * effect, never during render. */
+export function consumeLoginLinkFromUrl(): string | null {
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get(LOGIN_LINK_PARAM);
+  if (token) window.history.replaceState({}, "", window.location.pathname);
+  return token;
+}
+
 export function changePassword(
   currentPassword: string,
   newPassword: string,
@@ -118,6 +152,10 @@ export function listUsers(): Promise<User[]> {
   return request("/api/users");
 }
 
+export function getAdminStats(): Promise<AdminStats> {
+  return request("/api/admin/stats");
+}
+
 export function createUser(
   username: string,
   password: string,
@@ -128,6 +166,17 @@ export function createUser(
     method: "POST",
     body: JSON.stringify({ username, password, role, temporary_password: temporaryPassword }),
   });
+}
+
+export function createLinkUser(username: string | null, role: UserRole): Promise<LinkUserResponse> {
+  return request("/api/users/link", {
+    method: "POST",
+    body: JSON.stringify({ username, role }),
+  });
+}
+
+export function regenerateLoginLink(userId: string): Promise<LinkUserResponse> {
+  return request(`/api/users/${userId}/link`, { method: "POST" });
 }
 
 export function setUserStatus(userId: string, status: UserStatus): Promise<User> {
@@ -233,6 +282,90 @@ export async function streamChatMessage(
     if (chunk) onDelta(chunk);
   }
   return { conversationId: resolvedId, bookImages, pageRefs };
+}
+
+export interface ComparisonStreamResult extends ChatStreamResult {
+  comparisonId: string;
+}
+
+/**
+ * Dual-answer variant of `streamChatMessage`, for link-invited accounts: the
+ * same turn is answered twice (one personalized, one generic) and streamed
+ * side by side. `onDelta`/`onVariantDone` fire per variant as its own NDJSON
+ * events arrive -- the two interleave in real arrival order. Neither answer
+ * is added to the conversation until `chooseComparisonVariant` is called.
+ */
+export async function streamComparisonTurn(
+  learnerId: string,
+  message: string,
+  model: string | undefined,
+  conversationId: string | null,
+  attachmentIds: string[],
+  onDelta: (variant: VariantLabel, chunk: string) => void,
+  onVariantDone: (variant: VariantLabel) => void,
+): Promise<ComparisonStreamResult> {
+  const body: Record<string, unknown> = { message };
+  if (model) body.model = model;
+  if (conversationId) body.conversation_id = conversationId;
+  if (attachmentIds.length > 0) body.attachment_ids = attachmentIds;
+
+  const response = await fetch(`${BASE_URL}/api/chat/${learnerId}/compare`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify(body),
+  });
+  if (!response.ok || !response.body) {
+    await throwFromResponse(response);
+  }
+  const comparisonId = response.headers.get("X-Comparison-Id") ?? "";
+  const resolvedId = response.headers.get("X-Conversation-Id") ?? conversationId ?? "";
+  const bookImages = (response.headers.get("X-Book-Image-Ids") ?? "")
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .map((entry) => {
+      const [id, page] = entry.split(":");
+      return { id, page: Number(page) };
+    });
+  const pageRefs = (response.headers.get("X-Book-Reference-Pages") ?? "")
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .map(Number);
+
+  const reader = response.body!.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    let newlineIndex: number;
+    while ((newlineIndex = buffer.indexOf("\n")) >= 0) {
+      const line = buffer.slice(0, newlineIndex);
+      buffer = buffer.slice(newlineIndex + 1);
+      if (!line.trim()) continue;
+      const event = JSON.parse(line) as { variant: VariantLabel; delta?: string; done?: boolean };
+      if (event.delta) onDelta(event.variant, event.delta);
+      if (event.done) onVariantDone(event.variant);
+    }
+  }
+  return { comparisonId, conversationId: resolvedId, bookImages, pageRefs };
+}
+
+/** Submits the learner's pick for a comparison turn -- this is what actually
+ * appends the chosen variant to the conversation. */
+export function chooseComparisonVariant(
+  learnerId: string,
+  comparisonId: string,
+  variant: VariantLabel,
+  reasons: ReasonTag[],
+  otherReason?: string,
+): Promise<{ conversation_id: string }> {
+  return request(`/api/chat/${learnerId}/compare/${comparisonId}/choose`, {
+    method: "POST",
+    body: JSON.stringify({ variant, reasons, other_reason: otherReason }),
+  });
 }
 
 /** Uploads a file, returning its metadata. `conversationId` may be null for

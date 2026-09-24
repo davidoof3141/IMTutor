@@ -239,6 +239,86 @@ def test_register_does_not_reveal_taken_usernames(raw_client: TestClient) -> Non
     )
 
 
+def test_login_link_creates_a_passwordless_user(raw_client: TestClient) -> None:
+    admin = login(raw_client, **SUPERUSER)
+    headers = {"Authorization": f"Bearer {admin}"}
+    r = raw_client.post("/api/users/link", json={"username": "linked"}, headers=headers)
+    assert r.status_code == 201
+    body = r.json()
+    assert body["user"]["status"] == "approved"
+    assert body["user"]["role"] == "learner"
+    assert body["user"]["has_login_link"] is True
+    token = body["link_token"]
+    assert token
+
+    r = raw_client.post("/api/auth/login-link", json={"token": token})
+    assert r.status_code == 200
+    assert r.json()["user"]["username"] == "linked"
+
+    # Present in the user list with the flag set.
+    listed = raw_client.get("/api/users", headers=headers).json()
+    assert next(u for u in listed if u["username"] == "linked")["has_login_link"] is True
+
+
+def test_login_link_creation_is_admin_only(raw_client: TestClient) -> None:
+    learner = make_learner(raw_client)
+    r = raw_client.post(
+        "/api/users/link", json={}, headers={"Authorization": f"Bearer {learner}"}
+    )
+    assert r.status_code == 403
+
+
+def test_login_link_without_username_gets_a_generated_one(raw_client: TestClient) -> None:
+    admin = login(raw_client, **SUPERUSER)
+    r = raw_client.post("/api/users/link", json={}, headers={"Authorization": f"Bearer {admin}"})
+    assert r.status_code == 201
+    assert r.json()["user"]["username"]
+
+
+def test_login_link_rejects_unknown_or_reused_stale_tokens(raw_client: TestClient) -> None:
+    admin = login(raw_client, **SUPERUSER)
+    headers = {"Authorization": f"Bearer {admin}"}
+    r = raw_client.post("/api/users/link", json={"username": "reissued"}, headers=headers)
+    old_token = r.json()["link_token"]
+    user_id = r.json()["user"]["id"]
+
+    # Regenerating replaces the link -- the old token stops working.
+    r = raw_client.post(f"/api/users/{user_id}/link", headers=headers)
+    assert r.status_code == 200
+    new_token = r.json()["link_token"]
+    assert new_token != old_token
+
+    assert raw_client.post("/api/auth/login-link", json={"token": old_token}).status_code == 401
+    assert raw_client.post("/api/auth/login-link", json={"token": new_token}).status_code == 200
+    assert raw_client.post("/api/auth/login-link", json={"token": "not-a-real-token"}).status_code == 401
+
+
+def test_login_link_respects_account_status(raw_client: TestClient) -> None:
+    admin = login(raw_client, **SUPERUSER)
+    headers = {"Authorization": f"Bearer {admin}"}
+    r = raw_client.post("/api/users/link", json={"username": "revocable"}, headers=headers)
+    user_id = r.json()["user"]["id"]
+    token = r.json()["link_token"]
+
+    raw_client.post(f"/api/users/{user_id}/status", json={"status": "rejected"}, headers=headers)
+    r = raw_client.post("/api/auth/login-link", json={"token": token})
+    assert r.status_code == 403
+
+
+def test_regenerate_link_is_admin_only(raw_client: TestClient) -> None:
+    admin = login(raw_client, **SUPERUSER)
+    headers = {"Authorization": f"Bearer {admin}"}
+    linked = raw_client.post(
+        "/api/users/link", json={"username": "someone"}, headers=headers
+    ).json()["user"]["id"]
+
+    learner = make_learner(raw_client)
+    r = raw_client.post(
+        f"/api/users/{linked}/link", headers={"Authorization": f"Bearer {learner}"}
+    )
+    assert r.status_code == 403
+
+
 def test_admin_role_change_revokes_existing_tokens(raw_client: TestClient) -> None:
     token = make_learner(raw_client, "grace", "password1")
     assert raw_client.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"}).status_code == 200

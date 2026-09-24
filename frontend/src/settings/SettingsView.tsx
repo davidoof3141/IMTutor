@@ -1,8 +1,18 @@
 import { useCallback, useEffect, useState } from "react";
-import { ApiError, listUsers, setUserRole, setUserStatus } from "../api/client";
-import type { User, UserRole, UserStatus } from "../types";
+import {
+  ApiError,
+  buildLoginLinkUrl,
+  listUsers,
+  regenerateLoginLink,
+  setUserRole,
+  setUserStatus,
+} from "../api/client";
+import type { LinkUserResponse, User, UserRole, UserStatus } from "../types";
+import { AdminStats } from "./AdminStats";
 import { CHAT_MODELS, CHAT_MODEL_GROUPS } from "./chatModel";
+import { CreateLinkUserModal } from "./CreateLinkUserModal";
 import { CreateUserModal } from "./CreateUserModal";
+import { LinkResultModal } from "./LinkResultModal";
 
 interface Props {
   chatModel: string;
@@ -34,6 +44,8 @@ export function SettingsView({ chatModel, onChatModelChange, currentUserId }: Pr
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const [createOpen, setCreateOpen] = useState(false);
+  const [createLinkOpen, setCreateLinkOpen] = useState(false);
+  const [linkResult, setLinkResult] = useState<LinkUserResponse | null>(null);
 
   const refresh = useCallback(() => {
     listUsers()
@@ -51,6 +63,20 @@ export function SettingsView({ chatModel, onChatModelChange, currentUserId }: Pr
     try {
       const updated = await action();
       setUsers((list) => (list ?? []).map((u) => (u.id === updated.id ? updated : u)));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Der Server ist nicht erreichbar.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function handleRegenerateLink(userId: string) {
+    setBusyId(userId);
+    setError(null);
+    try {
+      const result = await regenerateLoginLink(userId);
+      setUsers((list) => (list ?? []).map((u) => (u.id === result.user.id ? result.user : u)));
+      setLinkResult(result);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Der Server ist nicht erreichbar.");
     } finally {
@@ -99,6 +125,16 @@ export function SettingsView({ chatModel, onChatModelChange, currentUserId }: Pr
         </section>
 
         <section className="settings-card">
+          <h2>Statistiken</h2>
+          <p className="settings-card-desc">
+            Wie oft die personalisierte bzw. die generische Antwort im Vergleich bevorzugt wurde,
+            welche Gründe genannt wurden, und wie oft Lernende die Tutor-Einstellungen im
+            Scrutability-Interface selbst angepasst haben.
+          </p>
+          <AdminStats />
+        </section>
+
+        <section className="settings-card">
           <div className="settings-card-head">
             <div>
               <h2>Nutzerverwaltung</h2>
@@ -115,6 +151,13 @@ export function SettingsView({ chatModel, onChatModelChange, currentUserId }: Pr
                 disabled={busyId !== null}
               >
                 Aktualisieren
+              </button>
+              <button
+                type="button"
+                className="invite-btn"
+                onClick={() => setCreateLinkOpen(true)}
+              >
+                Nutzer:in mit Link anlegen
               </button>
               <button
                 type="button"
@@ -162,6 +205,7 @@ export function SettingsView({ chatModel, onChatModelChange, currentUserId }: Pr
                       <td>
                         {u.username}
                         {isSelf && <span className="user-self"> (du)</span>}
+                        {u.has_login_link && <span className="link-badge">Link</span>}
                       </td>
                       <td>
                         {isSelf ? (
@@ -190,6 +234,14 @@ export function SettingsView({ chatModel, onChatModelChange, currentUserId }: Pr
                       <td>
                         {isSelf ? null : (
                           <div className="user-actions">
+                            <button
+                              type="button"
+                              className="link-btn"
+                              disabled={busy}
+                              onClick={() => void handleRegenerateLink(u.id)}
+                            >
+                              {u.has_login_link ? "Link erneuern" : "Link erzeugen"}
+                            </button>
                             {u.status !== "approved" && (
                               <button
                                 type="button"
@@ -230,6 +282,21 @@ export function SettingsView({ chatModel, onChatModelChange, currentUserId }: Pr
         <CreateUserModal
           onClose={() => setCreateOpen(false)}
           onCreated={(user) => setUsers((list) => [...(list ?? []), user])}
+        />
+      )}
+
+      {createLinkOpen && (
+        <CreateLinkUserModal
+          onClose={() => setCreateLinkOpen(false)}
+          onCreated={(result) => setUsers((list) => [...(list ?? []), result.user])}
+        />
+      )}
+
+      {linkResult && (
+        <LinkResultModal
+          username={linkResult.user.username}
+          link={buildLoginLinkUrl(linkResult.link_token)}
+          onClose={() => setLinkResult(null)}
         />
       )}
     </div>

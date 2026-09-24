@@ -13,9 +13,12 @@ from app.core.vector import ControlVector
 from app.rag.toc import Chapter
 from app.security import decode_token
 from app.store.attachments import AttachmentRepository
+from app.store.comparisons import ComparisonRepository
 from app.store.conversations import ConversationRepository
 from app.store.db import connection, ensure_schema
 from app.store.lessons import LessonRepository
+from app.store.login_links import LoginLinkRepository
+from app.store.override_changes import OverrideChangeRepository
 from app.store.overrides import OverrideRepository
 from app.store.profiles import ProfileRepository
 from app.store.rate_limit import RateLimitRepository
@@ -43,11 +46,14 @@ def get_state(request: Request) -> AppState:
 class Repos:
     profiles: ProfileRepository
     overrides: OverrideRepository
+    override_changes: OverrideChangeRepository
     sessions: SessionRepository
     study_mode: StudyModeRepository
     turn_logs: TurnLogRepository
     users: UserRepository
+    login_links: LoginLinkRepository
     conversations: ConversationRepository
+    comparisons: ComparisonRepository
     attachments: AttachmentRepository
     lessons: LessonRepository
     rate_limits: RateLimitRepository
@@ -60,11 +66,14 @@ def get_repos() -> Iterator[Repos]:
         yield Repos(
             profiles=ProfileRepository(conn),
             overrides=OverrideRepository(conn),
+            override_changes=OverrideChangeRepository(conn),
             sessions=SessionRepository(conn),
             study_mode=StudyModeRepository(conn),
             turn_logs=TurnLogRepository(conn),
             users=UserRepository(conn),
+            login_links=LoginLinkRepository(conn),
             conversations=ConversationRepository(conn),
+            comparisons=ComparisonRepository(conn),
             attachments=AttachmentRepository(conn),
             lessons=LessonRepository(conn),
             rate_limits=RateLimitRepository(conn),

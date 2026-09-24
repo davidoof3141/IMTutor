@@ -3,6 +3,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
   ApiError,
+  chooseComparisonVariant,
   fetchAttachmentObjectUrl,
   fetchBookImageObjectUrl,
   getBookPdfObjectUrl,
@@ -10,9 +11,11 @@ import {
   getConversationMessages,
   getFollowUpSuggestions,
   streamChatMessage,
+  streamComparisonTurn,
   uploadAttachment,
 } from "../api/client";
-import type { Attachment, BookImageRef, StudyModeState } from "../types";
+import type { Attachment, BookImageRef, ReasonTag, StudyModeState, VariantLabel } from "../types";
+import { ComparisonTurn, type ComparisonState } from "./ComparisonTurn";
 
 // Generic fallback shown above the input before the learner has said anything.
 // In training mode the chapter/section's own pre-generated starter questions
@@ -235,6 +238,9 @@ interface Props {
   newConversationDisabled: boolean;
   historyOpen: boolean;
   onToggleHistory: () => void;
+  /** Link-invited accounts get two answers per turn (one personalized, one
+   * generic) and must pick a favorite + reason before continuing. */
+  dualMode: boolean;
 }
 
 export function ChatPanel({
@@ -248,6 +254,7 @@ export function ChatPanel({
   newConversationDisabled,
   historyOpen,
   onToggleHistory,
+  dualMode,
 }: Props) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
@@ -273,6 +280,11 @@ export function ChatPanel({
   const [pendingAttachments, setPendingAttachments] = useState<Attachment[]>([]);
   const [uploading, setUploading] = useState(false);
   const [pdfModalPage, setPdfModalPage] = useState<number | null>(null);
+  // A pending personalized-vs-generic comparison turn (dualMode accounts
+  // only) -- non-null from the moment a message is sent until the learner
+  // picks a favorite + reason, at which point it collapses into a normal
+  // tutor message in `messages`. Input stays locked while this is set.
+  const [comparison, setComparison] = useState<ComparisonState | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   // The thread whose messages are already loaded, so the turn we just sent in a
@@ -379,9 +391,12 @@ export function ChatPanel({
     setPendingAttachments((prev) => prev.filter((a) => a.id !== id));
   }
 
-  async function sendMessage(text: string) {
-    if (!text || sending) return;
+  function sendMessage(text: string) {
+    if (!text || sending || comparison) return;
+    return dualMode ? sendComparisonMessage(text) : sendSingleMessage(text);
+  }
 
+  async function sendSingleMessage(text: string) {
     const attachments = pendingAttachments;
     const attachmentIds = attachments.map((a) => a.id);
 
@@ -438,6 +453,136 @@ export function ChatPanel({
     }
   }
 
+  async function sendComparisonMessage(text: string) {
+    const attachments = pendingAttachments;
+    const attachmentIds = attachments.map((a) => a.id);
+
+    setMessages((prev) => [...prev, { role: "learner", text, attachments }]);
+    setSuggestions([]);
+    setDraft("");
+    setPendingAttachments([]);
+    setSending(true);
+    setError(null);
+    setComparison({
+      comparisonId: null,
+      conversationId: null,
+      a: { text: "", done: false },
+      b: { text: "", done: false },
+      bookImages: [],
+      pageRefs: [],
+      picked: null,
+      reasons: new Set(),
+      otherReason: "",
+      submitting: false,
+      error: null,
+    });
+
+    try {
+      const onDelta = (variant: VariantLabel, chunk: string) => {
+        setComparison((prev) =>
+          prev
+            ? { ...prev, [variant]: { text: prev[variant].text + chunk, done: prev[variant].done } }
+            : prev,
+        );
+      };
+      const onVariantDone = (variant: VariantLabel) => {
+        setComparison((prev) =>
+          prev ? { ...prev, [variant]: { text: prev[variant].text, done: true } } : prev,
+        );
+      };
+      const {
+        comparisonId,
+        conversationId: resolvedId,
+        bookImages,
+        pageRefs,
+      } = await streamComparisonTurn(
+        learnerId,
+        text,
+        model,
+        conversationId,
+        attachmentIds,
+        onDelta,
+        onVariantDone,
+      );
+      setComparison((prev) =>
+        prev ? { ...prev, comparisonId, conversationId: resolvedId, bookImages, pageRefs } : prev,
+      );
+      if (resolvedId && resolvedId !== conversationId) {
+        loadedRef.current = resolvedId;
+        onConversationResolved(resolvedId);
+      }
+    } catch (err) {
+      setComparison(null);
+      setError(err instanceof ApiError ? err.message : "Der Server ist nicht erreichbar.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  function handlePickVariant(variant: VariantLabel) {
+    setComparison((prev) => (prev ? { ...prev, picked: variant, error: null } : prev));
+  }
+
+  function handleToggleReason(reason: ReasonTag) {
+    setComparison((prev) => {
+      if (!prev) return prev;
+      const reasons = new Set(prev.reasons);
+      if (reasons.has(reason)) reasons.delete(reason);
+      else reasons.add(reason);
+      return { ...prev, reasons };
+    });
+  }
+
+  function handleOtherReasonChange(value: string) {
+    setComparison((prev) => (prev ? { ...prev, otherReason: value } : prev));
+  }
+
+  async function handleConfirmChoice() {
+    if (!comparison || !comparison.picked || !comparison.comparisonId) return;
+    const { picked, comparisonId, reasons, otherReason, conversationId: comparisonConvId } = comparison;
+    if (reasons.size === 0) return;
+    if (reasons.has("other") && !otherReason.trim()) return;
+
+    setComparison((prev) => (prev ? { ...prev, submitting: true, error: null } : prev));
+    try {
+      await chooseComparisonVariant(
+        learnerId,
+        comparisonId,
+        picked,
+        Array.from(reasons),
+        reasons.has("other") ? otherReason.trim() : undefined,
+      );
+      const chosen = comparison[picked];
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "tutor",
+          text: chosen.text,
+          bookImages: comparison.bookImages,
+          pageRefs: comparison.pageRefs,
+        },
+      ]);
+      setComparison(null);
+      if (comparisonConvId) {
+        getFollowUpSuggestions(learnerId, comparisonConvId)
+          .then((r) => setSuggestions(r.questions))
+          .catch(() => {
+            // Best-effort -- the learner can still just type their own.
+          });
+      }
+    } catch (err) {
+      setComparison((prev) =>
+        prev
+          ? {
+              ...prev,
+              submitting: false,
+              error: err instanceof ApiError ? err.message : "Der Server ist nicht erreichbar.",
+            }
+          : prev,
+      );
+    }
+  }
+
   function handleSend(e: React.FormEvent) {
     e.preventDefault();
     void sendMessage(draft.trim());
@@ -454,6 +599,9 @@ export function ChatPanel({
     return intro.starters.length > 0 ? intro.starters : STARTER_QUESTIONS;
   }
   const suggestionList = messages.length === 0 ? starterQuestions() : suggestions;
+  // A pending comparison must be resolved (favorite + reason) before the
+  // learner can send anything else.
+  const locked = sending || comparison !== null;
   const suggestionChips = suggestionList.length > 0 && (
     <div className="chat-suggestions">
       {suggestionList.map((question, i) => (
@@ -461,7 +609,7 @@ export function ChatPanel({
           key={i}
           type="button"
           className="chat-suggestion-chip"
-          disabled={sending}
+          disabled={locked}
           onClick={() => handleSuggestionClick(question)}
         >
           {question}
@@ -536,6 +684,15 @@ export function ChatPanel({
             </Fragment>
           );
         })}
+        {comparison && (
+          <ComparisonTurn
+            comparison={comparison}
+            onPick={handlePickVariant}
+            onToggleReason={handleToggleReason}
+            onOtherReasonChange={handleOtherReasonChange}
+            onConfirm={() => void handleConfirmChoice()}
+          />
+        )}
       </div>
       {error && <p className="error-banner">{error}</p>}
       {pendingAttachments.length > 0 && (
@@ -555,10 +712,14 @@ export function ChatPanel({
           type="text"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          placeholder="Nachricht schreiben …"
-          disabled={sending}
+          placeholder={
+            comparison
+              ? "Wähle zuerst eine der beiden Antworten …"
+              : "Nachricht schreiben …"
+          }
+          disabled={locked}
         />
-        <button type="submit" className="primary" disabled={sending || !draft.trim()}>
+        <button type="submit" className="primary" disabled={locked || !draft.trim()}>
           Senden
         </button>
       </form>
@@ -574,7 +735,7 @@ export function ChatPanel({
         <button
           type="button"
           className="chat-quick-btn"
-          disabled={newConversationDisabled}
+          disabled={newConversationDisabled || comparison !== null}
           onClick={onNewConversation}
         >
           <svg viewBox="0 0 24 24" width="13" height="13" fill="none" aria-hidden="true">
@@ -590,7 +751,7 @@ export function ChatPanel({
         <button
           type="button"
           className="chat-quick-btn"
-          disabled={uploading}
+          disabled={uploading || comparison !== null}
           onClick={() => fileInputRef.current?.click()}
         >
           <svg viewBox="0 0 24 24" width="13" height="13" fill="none" aria-hidden="true">

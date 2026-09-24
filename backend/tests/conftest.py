@@ -19,8 +19,9 @@ from app.store.db import Conn
 RULES_DIR = Path(__file__).resolve().parents[1] / "rules"
 
 _TABLES = (
-    "users, profiles, overrides, study_mode, sessions, conversations, messages, attachments, "
-    "lesson_plans, lesson_steps, turn_logs, book_chunks, rate_limits"
+    "users, login_links, profiles, overrides, override_changes, study_mode, sessions, "
+    "conversations, messages, attachments, answer_comparisons, lesson_plans, lesson_steps, "
+    "turn_logs, book_chunks, rate_limits"
 )
 
 

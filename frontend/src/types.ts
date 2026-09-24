@@ -7,6 +7,7 @@ export interface User {
   role: UserRole;
   status: UserStatus;
   must_change_password: boolean;
+  has_login_link: boolean;
   created_at: string;
 }
 
@@ -15,9 +16,40 @@ export interface LoginResponse {
   user: User;
 }
 
+export interface LinkUserResponse {
+  user: User;
+  /** The raw token, visible only in this response -- turn it into a link
+   * immediately, it can't be retrieved again afterwards. */
+  link_token: string;
+}
+
 export interface MeResponse {
   user: User;
   learner_id: string | null;
+}
+
+export interface KindPreferenceCount {
+  kind: VariantKind;
+  count: number;
+}
+
+export interface ReasonCount {
+  reason: string;
+  count: number;
+}
+
+export interface OverrideFieldCount {
+  field: string;
+  count: number;
+}
+
+export interface AdminStats {
+  comparisons_decided: number;
+  comparisons_pending: number;
+  preference_by_kind: KindPreferenceCount[];
+  reason_counts: ReasonCount[];
+  override_changes_total: number;
+  override_changes_by_field: OverrideFieldCount[];
 }
 
 export type Role = "practitioner" | "analyst" | "academic";
@@ -209,6 +241,13 @@ export interface BookImageRef {
   id: string;
   page: number;
 }
+
+// The two on-screen slots a comparison turn's variants are randomly assigned
+// to (see backend app/api/chat.py's /compare) -- deliberately uninformative
+// about which one is personalized.
+export type VariantLabel = "a" | "b";
+export type VariantKind = "personalized" | "generic";
+export type ReasonTag = "detail" | "tone" | "clarity" | "examples" | "difficulty" | "other";
 
 export interface ConversationMessage {
   role: "learner" | "tutor";

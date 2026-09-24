@@ -23,6 +23,7 @@ class User(BaseModel):
     status: Status
     token_version: int
     must_change_password: bool
+    has_login_link: bool
     created_at: datetime
 
 
@@ -34,7 +35,8 @@ class UserRepository:
     """
 
     _COLUMNS = (
-        "id, username, role, status, token_version, must_change_password, created_at"
+        "id, username, role, status, token_version, must_change_password, created_at, "
+        "EXISTS (SELECT 1 FROM login_links WHERE login_links.user_id = users.id) AS has_login_link"
     )
 
     def __init__(self, conn: Conn) -> None:

@@ -7,11 +7,13 @@ interface Props {
   onToggleTheme: () => void;
   onLogin: (username: string, password: string) => Promise<void>;
   onRegister: (username: string, password: string) => Promise<{ status: string }>;
+  /** Set when a login-link URL failed to sign the visitor in automatically. */
+  linkError?: string | null;
 }
 
 type Mode = "login" | "register";
 
-export function AuthScreen({ theme, onToggleTheme, onLogin, onRegister }: Props) {
+export function AuthScreen({ theme, onToggleTheme, onLogin, onRegister, linkError }: Props) {
   const [mode, setMode] = useState<Mode>("login");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -75,6 +77,7 @@ export function AuthScreen({ theme, onToggleTheme, onLogin, onRegister }: Props)
       </header>
 
       <div className="auth-shell">
+        {linkError && <p className="error-banner">{linkError}</p>}
         <div className="segmented auth-tabs" role="tablist" aria-label="Anmelden oder registrieren">
           <button
             type="button"

@@ -54,6 +54,16 @@ CREATE TABLE IF NOT EXISTS users (
 ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN NOT NULL DEFAULT FALSE;
 
+-- One login link per user: a high-entropy token (only its hash is stored,
+-- same treatment as a password) that logs its owner in without a password.
+-- Re-issuing (see LoginLinkRepository.issue) overwrites the row, so an old
+-- link stops working the moment a new one is generated.
+CREATE TABLE IF NOT EXISTS login_links (
+    user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    token_hash TEXT NOT NULL UNIQUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS profiles (
     learner_id TEXT PRIMARY KEY,
     user_id TEXT REFERENCES users(id),
@@ -94,6 +104,23 @@ CREATE TABLE IF NOT EXISTS overrides (
     value TEXT NOT NULL,
     PRIMARY KEY (learner_id, field)
 );
+
+-- Append-only audit trail of scrutability-interface edits (see
+-- app/store/override_changes.py): one row per field a learner actually
+-- changed, set, or reverted, with the value on each side of the edit.
+-- old_value/new_value are NULL when that side is "the derived default"
+-- rather than an explicit override.
+CREATE TABLE IF NOT EXISTS override_changes (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    learner_id TEXT NOT NULL,
+    field TEXT NOT NULL,
+    old_value JSONB,
+    new_value JSONB,
+    changed_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS override_changes_learner_idx
+    ON override_changes (learner_id, id);
 
 CREATE TABLE IF NOT EXISTS study_mode (
     learner_id TEXT PRIMARY KEY,
@@ -201,6 +228,46 @@ CREATE TABLE IF NOT EXISTS book_chunks (
 
 CREATE INDEX IF NOT EXISTS book_chunks_embedding_idx
     ON book_chunks USING hnsw (embedding vector_cosine_ops);
+
+-- Personalized-vs-generic A/B chat turns shown to link-invited accounts (see
+-- app/store/comparisons.py). Created with both variant_*_text NULL the
+-- moment a comparison starts, filled in as each stream finishes, and
+-- finalized once the learner picks a favorite and a reason.
+CREATE TABLE IF NOT EXISTS answer_comparisons (
+    id TEXT PRIMARY KEY,
+    conversation_id TEXT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+    learner_id TEXT NOT NULL,
+    learner_message TEXT NOT NULL,
+    ruleset_version TEXT NOT NULL,
+    personalized_vector JSONB NOT NULL,
+    baseline_vector JSONB NOT NULL,
+    -- Which vector produced each on-screen slot -- randomized per turn so
+    -- position never correlates with personalization.
+    variant_a_kind TEXT NOT NULL CHECK (variant_a_kind IN ('personalized', 'generic')),
+    variant_b_kind TEXT NOT NULL CHECK (variant_b_kind IN ('personalized', 'generic')),
+    variant_a_text TEXT,
+    variant_a_model TEXT,
+    variant_a_prompt_tokens INTEGER,
+    variant_a_completion_tokens INTEGER,
+    variant_b_text TEXT,
+    variant_b_model TEXT,
+    variant_b_prompt_tokens INTEGER,
+    variant_b_completion_tokens INTEGER,
+    book_context TEXT NOT NULL DEFAULT '',
+    book_image_refs JSONB NOT NULL DEFAULT '[]',
+    page_refs JSONB NOT NULL DEFAULT '[]',
+    attachment_ids JSONB NOT NULL DEFAULT '[]',
+    lesson_id TEXT,
+    study_mode JSONB,
+    chosen_variant TEXT CHECK (chosen_variant IN ('a', 'b')),
+    reasons JSONB,
+    other_reason TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    decided_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS answer_comparisons_conversation_idx
+    ON answer_comparisons (conversation_id, created_at);
 
 CREATE TABLE IF NOT EXISTS turn_logs (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,

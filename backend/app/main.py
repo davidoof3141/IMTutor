@@ -10,6 +10,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import (
+    admin_stats,
     attachments,
     auth,
     book_images,
@@ -117,7 +118,12 @@ app.add_middleware(
     allow_origins=_origins,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["X-Conversation-Id", "X-Book-Image-Ids", "X-Book-Reference-Pages"],
+    expose_headers=[
+        "X-Conversation-Id",
+        "X-Book-Image-Ids",
+        "X-Book-Reference-Pages",
+        "X-Comparison-Id",
+    ],
 )
 
 app.include_router(health.router)
@@ -137,3 +143,4 @@ app.include_router(lesson.router)
 app.include_router(planner.router)
 app.include_router(chapter_intro.router)
 app.include_router(export.router)
+app.include_router(admin_stats.router)

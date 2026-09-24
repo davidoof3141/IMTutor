@@ -82,6 +82,11 @@ def set_override(
     user: User = Depends(get_current_user),
 ) -> ConfigResponse:
     authorize_learner(learner_id, user, repos)
+    before = _load_config(learner_id, state, repos)
+    for field, new_value in body.as_sparse_dict().items():
+        old_value = before.override.get(field, getattr(before.derived, field))
+        if old_value != new_value:
+            repos.override_changes.log(learner_id, field, old_value, new_value)
     repos.overrides.set(learner_id, body.as_sparse_dict())
     return _load_config(learner_id, state, repos)
 
@@ -97,6 +102,11 @@ def revert_override(
     authorize_learner(learner_id, user, repos)
     if param not in PARAMETER_NAMES:
         raise HTTPException(status_code=400, detail=f"unknown parameter: {param}")
+    before = _load_config(learner_id, state, repos)
+    if param in before.override:
+        repos.override_changes.log(
+            learner_id, param, before.override[param], getattr(before.derived, param)
+        )
     repos.overrides.delete_field(learner_id, param)
     return _load_config(learner_id, state, repos)
 
@@ -109,5 +119,8 @@ def reset_overrides(
     user: User = Depends(get_current_user),
 ) -> ConfigResponse:
     authorize_learner(learner_id, user, repos)
+    before = _load_config(learner_id, state, repos)
+    for field, old_value in before.override.items():
+        repos.override_changes.log(learner_id, field, old_value, getattr(before.derived, field))
     repos.overrides.delete_all(learner_id)
     return _load_config(learner_id, state, repos)

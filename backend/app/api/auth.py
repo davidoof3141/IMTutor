@@ -64,6 +64,10 @@ class ChangePasswordRequest(BaseModel):
     new_password: str = Field(min_length=8, max_length=128)
 
 
+class LoginLinkRequest(BaseModel):
+    token: str = Field(min_length=1, max_length=256)
+
+
 @router.post("/register", response_model=RegisterResponse, status_code=201)
 def register(
     body: Credentials, request: Request, repos: Repos = Depends(get_repos)
@@ -96,6 +100,24 @@ def login(
     if found is None or not verify_password(body.password, found[1]):
         raise HTTPException(status_code=401, detail="wrong username or password")
     user, _ = found
+    if user.status == "pending":
+        raise HTTPException(status_code=403, detail="account is awaiting admin approval")
+    if user.status == "rejected":
+        raise HTTPException(status_code=403, detail="account was rejected by an admin")
+    return LoginResponse(token=create_token(user.id, user.token_version), user=user)
+
+
+@router.post("/login-link", response_model=LoginResponse)
+def login_with_link(
+    body: LoginLinkRequest, request: Request, repos: Repos = Depends(get_repos)
+) -> LoginResponse:
+    """Passwordless sign-in: exchanges an admin-generated link token for a
+    session, the same as `/login` would for a username/password pair."""
+    _rate_limit(request, repos, "login-link", _LOGIN_MAX_ATTEMPTS, _LOGIN_WINDOW_SECONDS)
+    user_id = repos.login_links.resolve(body.token)
+    user = repos.users.get(user_id) if user_id else None
+    if user is None:
+        raise HTTPException(status_code=401, detail="invalid or expired link")
     if user.status == "pending":
         raise HTTPException(status_code=403, detail="account is awaiting admin approval")
     if user.status == "rejected":
