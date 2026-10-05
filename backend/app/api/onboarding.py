@@ -9,6 +9,7 @@ from app.core.constants import CURRENT_RULESET_VERSION
 from app.core.mapping import derive
 from app.core.profile import Goal, Industry, LearnerType, PriorExperience, Profile, Role
 from app.core.vector import Attribution, ControlVector
+from app.store.study_mode import StudyModeState
 from app.store.users import User
 
 router = APIRouter(prefix="/api/onboarding", tags=["onboarding"])
@@ -47,6 +48,13 @@ def onboard(
         created_at=datetime.now(UTC),
     )
     repos.profiles.create(profile)
+
+    # Link-invited accounts (the A/B comparison study's participants) land
+    # straight on the Lernplan -- their curriculum is already narrowed to
+    # chapters 3.1-3.3 (see app/api/study_mode.py), so free exploration adds
+    # nothing and the schedule is the more useful default view.
+    if user.has_login_link:
+        repos.study_mode.set(profile.learner_id, StudyModeState(mode="training"))
 
     ruleset = state.rulesets[profile.ruleset_version]
     derived, attribution = derive(profile, ruleset)

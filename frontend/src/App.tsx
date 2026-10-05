@@ -21,6 +21,7 @@ import { HistorySidebar } from "./history/HistorySidebar";
 import { LessonRail } from "./lesson/LessonRail";
 import { ModeToggle } from "./mode/ModeToggle";
 import { OnboardingForm } from "./onboarding/OnboardingForm";
+import { OnboardingTour } from "./onboarding/OnboardingTour";
 import { ProfileMenu } from "./profile/ProfileMenu";
 import { SettingsView } from "./settings/SettingsView";
 import { useChatModel } from "./settings/chatModel";
@@ -342,13 +343,16 @@ function App() {
                 ← Zurück zur Sitzung
               </button>
             ) : (
-              <ModeToggle mode={studyMode.mode} onChange={handleModeChange} />
+              <span data-tour="mode-toggle">
+                <ModeToggle mode={studyMode.mode} onChange={handleModeChange} />
+              </span>
             )}
           </div>
           <div className="header-right">
             {!inSettings && (
               <button
                 type="button"
+                data-tour="scrutability"
                 className={"setup-toggle" + (setupOpen ? " active" : "")}
                 aria-pressed={setupOpen}
                 aria-label="So ist dein Tutor eingestellt"
@@ -402,6 +406,7 @@ function App() {
               onStudyModeChange={handleSelectionChange}
               collapsed={scheduleCollapsed}
               onToggleCollapsed={toggleScheduleCollapsed}
+              dualMode={dualMode}
             />
             {!scheduleCollapsed && (
               <LessonRail
@@ -456,6 +461,8 @@ function App() {
           onClose={() => setHistoryOpen(false)}
         />
       )}
+
+      {!inSettings && <OnboardingTour learnerId={learnerId} dualMode={dualMode} />}
     </div>
   );
 }

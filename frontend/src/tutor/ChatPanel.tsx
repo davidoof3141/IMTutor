@@ -767,6 +767,7 @@ export function ChatPanel({
         </button>
         <button
           type="button"
+          data-tour="history"
           className={"chat-quick-btn" + (historyOpen ? " active" : "")}
           aria-pressed={historyOpen}
           onClick={onToggleHistory}
