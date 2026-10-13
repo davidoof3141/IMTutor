@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
@@ -8,9 +8,7 @@ from pydantic import BaseModel, ConfigDict
 # chapter's mapping call without ever updating the seed.
 PriorKnowledge = Literal["none", "low", "moderate", "high"]
 LearningGoal = Literal["certification", "applied", "orientation"]
-# How long the learner needs the material to stay available. An exam date is
-# converted ONCE at onboarding (band_from_exam_date) and only the band is
-# stored, so derive() never has to read the clock.
+# How long the learner needs the material to stay available.
 RetentionHorizon = Literal["within_2_weeks", "1_to_3_months", "long_term"]
 # The learner's working context; decides which world the tutor's examples
 # are drawn from (maps to the example_domain control parameter).
@@ -40,24 +38,6 @@ DEFAULT_PRIOR_KNOWLEDGE_SEED: PriorKnowledge = "none"
 DEFAULT_LEARNING_GOAL: LearningGoal = "applied"
 DEFAULT_RETENTION_HORIZON: RetentionHorizon = "1_to_3_months"
 DEFAULT_INDUSTRY: Industry = "neutral"
-
-_TWO_WEEKS_DAYS = 14
-_THREE_MONTHS_DAYS = 92
-
-
-def band_from_exam_date(exam_date: date, today: date) -> RetentionHorizon:
-    """Converts an exam date to a retention band. `today` is passed in by the
-    onboarding route (the one place that reads the clock); this function and
-    derive() stay clock-free."""
-    days = (exam_date - today).days
-    if days < 0:
-        raise ValueError("exam date lies in the past")
-    if days <= _TWO_WEEKS_DAYS:
-        return "within_2_weeks"
-    if days <= _THREE_MONTHS_DAYS:
-        return "1_to_3_months"
-    return "long_term"
-
 
 class Profile(BaseModel):
     """Write-once record of a learner's onboarding answers.

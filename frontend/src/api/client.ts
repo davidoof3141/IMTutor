@@ -198,9 +198,7 @@ export function setUserRole(userId: string, role: UserRole): Promise<User> {
 export function onboard(answers: {
   prior_knowledge_seed: PriorKnowledge;
   learning_goal: LearningGoal;
-  /** Either a band or an exam date (YYYY-MM-DD); the server converts a date once. */
-  retention_horizon?: RetentionHorizon;
-  exam_date?: string;
+  retention_horizon: RetentionHorizon;
   industry: Industry;
   simplified_language: boolean;
   presentation_style: PresentationStyle;

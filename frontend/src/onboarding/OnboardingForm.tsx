@@ -119,7 +119,6 @@ export function OnboardingForm({ onComplete, theme, onToggleTheme }: Props) {
   const [priorKnowledge, setPriorKnowledge] = useState<PriorKnowledge>("none");
   const [goal, setGoal] = useState<LearningGoal>("applied");
   const [retention, setRetention] = useState<RetentionHorizon>("1_to_3_months");
-  const [examDate, setExamDate] = useState("");
   const [industry, setIndustry] = useState<Industry>("neutral");
   // Preferences: shape the wording only, never the didactic settings.
   const [simplifiedLanguage, setSimplifiedLanguage] = useState(false);
@@ -135,8 +134,7 @@ export function OnboardingForm({ onComplete, theme, onToggleTheme }: Props) {
       const result = await onboard({
         prior_knowledge_seed: priorKnowledge,
         learning_goal: goal,
-        // A date wins over the band; the server turns it into a band once.
-        ...(examDate ? { exam_date: examDate } : { retention_horizon: retention }),
+        retention_horizon: retention,
         industry,
         simplified_language: simplifiedLanguage,
         presentation_style: style,
@@ -207,27 +205,8 @@ export function OnboardingForm({ onComplete, theme, onToggleTheme }: Props) {
               description="Wie lange sollst du den Stoff parat haben?"
               value={retention}
               options={RETENTION_OPTIONS}
-              onChange={(v) => {
-                setRetention(v);
-                setExamDate("");
-              }}
+              onChange={setRetention}
             />
-            <div className="onboarding-field">
-              <div>
-                <div className="field-label">Oder Prüfungstermin</div>
-                <div className="field-description">
-                  Optional. Wir ordnen den Termin einmalig einer der Stufen oben zu und speichern
-                  nur die Stufe, nicht das Datum.
-                </div>
-              </div>
-              <input
-                type="date"
-                className="field-select"
-                aria-label="Prüfungstermin"
-                value={examDate}
-                onChange={(e) => setExamDate(e.target.value)}
-              />
-            </div>
             <OnboardingField
               label="Branche"
               description="In welchem Umfeld arbeitest du? Die Beispiele des Tutors kommen aus dieser Branche."

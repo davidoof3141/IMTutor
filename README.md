@@ -21,9 +21,7 @@ selects fixed prompt clauses for the LLM tutor. Everything the learner sees
 
 **Onboarding** collects four *mapping inputs* -- prior-knowledge seed
 (`none/low/moderate/high`), learning goal (`certification/applied/orientation`),
-retention horizon (`within_2_weeks/1_to_3_months/long_term`; an exam date is
-converted once to one of these bands at onboarding and only the band is
-stored) and industry -- plus two *preferences*.
+retention horizon (`within_2_weeks/1_to_3_months/long_term`) and industry -- plus two *preferences*.
 
 **Two-layer prior knowledge.** The onboarding answer is only a *seed*. Before
 the first lesson of each (sub)chapter that has a diagnostic, the learner answers

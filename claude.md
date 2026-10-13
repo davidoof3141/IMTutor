@@ -50,7 +50,7 @@ four of them by these names. Keep both in step.
 | DR | Requirement | Where it is enforced |
 |----|-------------|----------------------|
 | DR1 | **No in-session performance signal feeds the profile or the vector.** The per-chapter diagnostic runs *before* instruction; nothing answered during instruction (chat, checkpoints, quizzes) is read back. | `Profile` is frozen and write-once; `chapter_diagnostics` is written only by `POST /api/diagnostic`; `tests/test_diagnostic.py::test_instruction_routes_never_write_the_profile_or_diagnostics` |
-| DR2 | **`derive()` is pure, total and deterministic.** No clock reads: an exam date is converted to a retention band once, at onboarding. | invariants 1-2; `tests/test_purity.py`, `test_totality.py`, `test_determinism.py`, `test_onboarding_profile.py::test_identical_profile_gives_byte_equal_vector` |
+| DR2 | **`derive()` is pure, total and deterministic.** No clock reads. | invariants 1-2; `tests/test_purity.py`, `test_totality.py`, `test_determinism.py`, `test_onboarding_profile.py::test_identical_profile_gives_byte_equal_vector` |
 | DR4 | **Help on request within a turn stays with the LLM.** The control layer sets the style once; it never decides mid-dialogue to explain more or less. | no code path from a turn back into `derive()` |
 | DR6 | **The profile and the resulting vector are visible to the learner and overridable before instruction.** Applies to the onboarding vector and to each chapter vector (the diagnostic summary screen overrides per field). | scrutability panel; `/api/diagnostic/.../override` |
 
@@ -74,7 +74,7 @@ class Profile(BaseModel):        # immutable
     # --- the four mapping inputs ---
     prior_knowledge_seed: PriorKnowledge   # SEED only; see "Two-layer prior knowledge"
     learning_goal: LearningGoal
-    retention_horizon: RetentionHorizon    # an exam date is banded ONCE at onboarding
+    retention_horizon: RetentionHorizon
     industry: Industry                     # drop-down; feeds example_domain
     # --- preferences: NOT in the mapping ---
     simplified_language: bool
@@ -290,7 +290,7 @@ same reason, for the planner table a lesson plan is built from.
 Three surfaces:
 
 - **Onboarding** — four mapping questions (prior knowledge seed, goal,
-  retention horizon -- or an exam date, banded once by the server -- and
+  retention horizon and
   industry as a drop-down) plus the two preferences. No free text: free text
   would need interpreting and would break invariant 1.
 - **Chapter diagnostic** — quiz, then a summary with per-field override,
