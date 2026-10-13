@@ -27,6 +27,10 @@ from app.store.users import User
 router = APIRouter(prefix="/api/diagnostic", tags=["diagnostic"])
 
 
+# The file stores the English sentinel; learners see this.
+DONT_KNOW_LABEL = "Ich weiß es nicht"
+
+
 class PublicOption(BaseModel):
     text: str
 
@@ -63,13 +67,13 @@ def _selected_diagnostic(learner_id: str, state: AppState, repos: Repos) -> Diag
     mode = repos.study_mode.get(learner_id)
     if mode.mode != "training" or mode.chapter_number is None:
         return None
-    return resolve_diagnostic(state.diagnostics, mode.chapter_number, mode.section_number)
+    return resolve_diagnostic(state.diagnostics, mode.chapter_number)
 
 
 def _result(
     profile: Profile, diagnostic: Diagnostic, state: AppState, repos: Repos
 ) -> DiagnosticResult:
-    stored = repos.chapter_diagnostics.get(profile.learner_id, diagnostic.key)
+    stored = repos.chapter_diagnostics.get(profile.learner_id, diagnostic.chapter_id)
     assert stored is not None
     resolved = resolve_config(profile, state, repos)
     return DiagnosticResult(
@@ -111,14 +115,19 @@ def get_status(
     if diagnostic is None:
         return DiagnosticStatus(required=False)
     items = [
-        PublicItem(stem=i.stem, options=[PublicOption(text=o.text) for o in i.options])
+        PublicItem(
+            stem=i.stem,
+            options=[
+                PublicOption(text=DONT_KNOW_LABEL if o.dont_know else o.text) for o in i.options
+            ],
+        )
         for i in diagnostic.items
     ]
-    if repos.chapter_diagnostics.get(learner_id, diagnostic.key) is None:
-        return DiagnosticStatus(required=True, key=diagnostic.key, items=items)
+    if repos.chapter_diagnostics.get(learner_id, diagnostic.chapter_id) is None:
+        return DiagnosticStatus(required=True, key=diagnostic.chapter_id, items=items)
     return DiagnosticStatus(
         required=True,
-        key=diagnostic.key,
+        key=diagnostic.chapter_id,
         items=items,
         result=_result(profile, diagnostic, state, repos),
     )
@@ -134,14 +143,16 @@ def submit(
 ) -> DiagnosticResult:
     profile, diagnostic = _load(learner_id, state, repos, user)
     try:
-        count, level = score(diagnostic, body.answers, profile.prior_knowledge_seed)
+        count, level = score(
+            diagnostic, body.answers, profile.prior_knowledge_seed, state.scoring_table
+        )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     try:
         repos.chapter_diagnostics.create(
             StoredDiagnostic(
                 learner_id=learner_id,
-                diagnostic_key=diagnostic.key,
+                diagnostic_key=diagnostic.chapter_id,
                 answers=body.answers,
                 correct_count=count,
                 experience_seed=profile.prior_knowledge_seed,
@@ -170,14 +181,14 @@ def set_override(
     user: User = Depends(get_current_user),
 ) -> DiagnosticResult:
     profile, diagnostic = _load(learner_id, state, repos, user)
-    current = _chapter_override(learner_id, diagnostic.key, repos)
+    current = _chapter_override(learner_id, diagnostic.chapter_id, repos)
     before = resolve_config(profile, state, repos)
     for field, new_value in body.as_sparse_dict().items():
         old_value = before.effective.model_dump()[field]
         if old_value != new_value:
             repos.override_changes.log(learner_id, field, old_value, new_value)
     repos.chapter_diagnostics.set_override(
-        learner_id, diagnostic.key, {**current, **body.as_sparse_dict()}
+        learner_id, diagnostic.chapter_id, {**current, **body.as_sparse_dict()}
     )
     return _result(profile, diagnostic, state, repos)
 
@@ -193,14 +204,14 @@ def revert_override(
     if param not in PARAMETER_NAMES:
         raise HTTPException(status_code=400, detail=f"unknown parameter: {param}")
     profile, diagnostic = _load(learner_id, state, repos, user)
-    current = _chapter_override(learner_id, diagnostic.key, repos)
+    current = _chapter_override(learner_id, diagnostic.chapter_id, repos)
     if param in current:
         before = resolve_config(profile, state, repos)
         repos.override_changes.log(
             learner_id, param, current[param], getattr(before.derived, param)
         )
         del current[param]
-        repos.chapter_diagnostics.set_override(learner_id, diagnostic.key, current)
+        repos.chapter_diagnostics.set_override(learner_id, diagnostic.chapter_id, current)
     return _result(profile, diagnostic, state, repos)
 
 
@@ -212,9 +223,9 @@ def reset_override(
     user: User = Depends(get_current_user),
 ) -> DiagnosticResult:
     profile, diagnostic = _load(learner_id, state, repos, user)
-    current = _chapter_override(learner_id, diagnostic.key, repos)
+    current = _chapter_override(learner_id, diagnostic.chapter_id, repos)
     before = resolve_config(profile, state, repos)
     for field, old_value in current.items():
         repos.override_changes.log(learner_id, field, old_value, getattr(before.derived, field))
-    repos.chapter_diagnostics.set_override(learner_id, diagnostic.key, {})
+    repos.chapter_diagnostics.set_override(learner_id, diagnostic.chapter_id, {})
     return _result(profile, diagnostic, state, repos)

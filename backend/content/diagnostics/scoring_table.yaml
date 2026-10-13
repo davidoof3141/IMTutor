@@ -1,0 +1,15 @@
+# Shared scoring table for every chapter diagnostic: (correct answers, seed) ->
+# chapter-level prior knowledge. `seed` is the learner's onboarding
+# prior_knowledge_seed. Plain lookup, no model inference. Validated at startup:
+# every correct (0-4) x seed (none/low/moderate/high) pair must resolve exactly once.
+table:
+  - { correct: 0, seed: [none, low],      level: none }
+  - { correct: 0, seed: [moderate, high], level: low }
+  - { correct: 1, seed: [none, low],      level: low }
+  - { correct: 1, seed: [moderate, high], level: low }
+  - { correct: 2, seed: [none, low],      level: low }
+  - { correct: 2, seed: [moderate, high], level: moderate }
+  - { correct: 3, seed: [none, low],      level: moderate }
+  - { correct: 3, seed: [moderate, high], level: moderate }
+  - { correct: 4, seed: [none, low],      level: moderate }
+  - { correct: 4, seed: [moderate, high], level: high }

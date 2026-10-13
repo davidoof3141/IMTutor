@@ -24,15 +24,17 @@ selects fixed prompt clauses for the LLM tutor. Everything the learner sees
 retention horizon (`within_2_weeks/1_to_3_months/long_term`) and industry -- plus three *preferences*.
 
 **Two-layer prior knowledge.** The onboarding answer is only a *seed*. Before
-the first lesson of each (sub)chapter that has a diagnostic, the learner answers
-3-4 SME-authored multiple-choice items (each with an "I don't know" option that
-scores 0). A fixed lookup table `(correct_count, seed) -> level` gives a
+the first lesson of a chapter that has a diagnostic, the learner answers a
+4-item rapid diagnostic after Kalyuga & Sweller (2004) -- recognition,
+classification, first step, transfer; each with an "I don't know" option that
+scores 0. A fixed lookup table `(correct_count, seed) -> level` gives a
 chapter-level prior knowledge that **replaces the seed for that chapter's
 mapping call only**; the seed itself is never updated. A summary screen shows
-the result and the chapter's vector with per-field override. Items and
-scoring table live in `backend/content/<course>/<chapter>/diagnostic.yaml`
-(template: [backend/content/diagnostic.example.yaml](backend/content/diagnostic.example.yaml));
-a chapter without that file simply has no diagnostic and uses the seed.
+the result and the chapter's vector with per-field override. The diagnostics
+are generated offline (`make diagnostics` in `backend/`), reviewed by a human
+and committed as static YAML under `backend/content/diagnostics/`, next to the
+shared `scoring_table.yaml`; the server only loads them, and refuses to start
+on an invalid file. A chapter without a file has no diagnostic and uses the seed.
 
 **Preferences are not in the mapping.** `simplified_language` (on/off),
 `presentation_style` (`concise/balanced/verbose`) and `learner_type` (Lerntyp

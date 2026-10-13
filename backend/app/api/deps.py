@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from fastapi import Depends, HTTPException, Request
 
 from app.core.clauses import ClauseCatalogue
-from app.core.diagnostic import Diagnostic, resolve_diagnostic
+from app.core.diagnostic import Diagnostic, ScoringTable, resolve_diagnostic
 from app.core.mapping import derive, effective
 from app.core.planner import PlannerTable
 from app.core.profile import Profile
@@ -37,8 +37,9 @@ class AppState:
     curriculum: list[Chapter]
     planner_tables: dict[str, PlannerTable]
     step_templates: dict[str, StepTemplates]
-    # "3" / "3.1" -> SME-authored diagnostic (backend/content/); may be empty
+    # chapter number -> reviewed, committed diagnostic (backend/content/diagnostics/); may be empty
     diagnostics: dict[str, Diagnostic]
+    scoring_table: ScoringTable
 
 
 def get_state(request: Request) -> AppState:
@@ -149,12 +150,10 @@ def completed_diagnostic(
     taken yet)."""
     if study_mode.mode != "training" or study_mode.chapter_number is None:
         return None
-    diagnostic = resolve_diagnostic(
-        state.diagnostics, study_mode.chapter_number, study_mode.section_number
-    )
+    diagnostic = resolve_diagnostic(state.diagnostics, study_mode.chapter_number)
     if diagnostic is None:
         return None
-    return repos.chapter_diagnostics.get(profile.learner_id, diagnostic.key)
+    return repos.chapter_diagnostics.get(profile.learner_id, diagnostic.chapter_id)
 
 
 def resolve_config(profile: Profile, state: AppState, repos: Repos) -> ResolvedConfig:
@@ -193,12 +192,10 @@ def require_diagnostic_done(profile: Profile, state: AppState, repos: Repos) -> 
     study_mode = repos.study_mode.get(profile.learner_id)
     if study_mode.mode != "training" or study_mode.chapter_number is None:
         return
-    diagnostic = resolve_diagnostic(
-        state.diagnostics, study_mode.chapter_number, study_mode.section_number
-    )
+    diagnostic = resolve_diagnostic(state.diagnostics, study_mode.chapter_number)
     if diagnostic is None:
         return
-    if repos.chapter_diagnostics.get(profile.learner_id, diagnostic.key) is None:
+    if repos.chapter_diagnostics.get(profile.learner_id, diagnostic.chapter_id) is None:
         raise HTTPException(status_code=409, detail="diagnostic_required")
 
 

@@ -10,6 +10,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import (
+    admin_diagnostics,
     admin_stats,
     attachments,
     auth,
@@ -32,10 +33,16 @@ from app.api import (
 )
 from app.api.deps import AppState
 from app.core.clauses import ClauseCatalogue, load_catalogue
-from app.core.diagnostic import load_diagnostics
+from app.core.diagnostic import (
+    SCORING_TABLE_FILENAME,
+    load_diagnostics,
+    load_scoring_table,
+    stale_chapters,
+)
 from app.core.planner import PlannerTable, load_planner_table
 from app.core.rules import RuleSet, load_ruleset
 from app.core.step_templates import StepTemplates, load_step_templates
+from app.rag.chapter_text import current_hashes
 from app.rag.chunking import BOOK_PATH
 from app.rag.toc import extract_curriculum
 from app.store import db
@@ -43,7 +50,7 @@ from app.store import db
 logger = logging.getLogger("app.main")
 
 RULES_DIR = Path(__file__).resolve().parents[1] / "rules"
-CONTENT_DIR = Path(__file__).resolve().parents[1] / "content"
+DIAGNOSTICS_DIR = Path(__file__).resolve().parents[1] / "content" / "diagnostics"
 RULESET_FILENAME = re.compile(r"^ruleset\.(?P<version>.+)\.yaml$")
 PLANNER_FILENAME = re.compile(r"^planner\.(?P<version>.+)\.yaml$")
 STEP_TEMPLATES_FILENAME = re.compile(r"^step_templates\.(?P<version>.+)\.yaml$")
@@ -83,10 +90,34 @@ def load_all_planner_tables(
     return planner_tables, step_templates
 
 
+def _warn_if_stale(state: AppState) -> None:
+    """Best-effort: a stale diagnostic is served anyway, so a database that is
+    unreachable (or has no book index yet) must not stop startup."""
+    if not state.diagnostics:
+        return
+    try:
+        with db.connection() as conn:
+            hashes = current_hashes(conn, state.curriculum)
+    except Exception:  # noqa: BLE001 - any DB failure just skips the check
+        logger.warning("could not check diagnostics for staleness: database unavailable")
+        return
+    for chapter_id in stale_chapters(state.diagnostics, hashes):
+        logger.warning(
+            "diagnostic for chapter %s is stale: the book content changed since it was "
+            "generated (see /api/admin/diagnostics-stale; regenerate with make diagnostics)",
+            chapter_id,
+        )
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     load_dotenv()
     rulesets, catalogues = load_all_rulesets(RULES_DIR)
+    # Static, human-reviewed YAML. An invalid file raises DiagnosticFileError
+    # naming it, which aborts startup on purpose.
+    scoring_table = load_scoring_table(DIAGNOSTICS_DIR / SCORING_TABLE_FILENAME)
+    diagnostics = load_diagnostics(DIAGNOSTICS_DIR)
+    curriculum = extract_curriculum(BOOK_PATH)
     planner_tables, step_templates = load_all_planner_tables(RULES_DIR)
     # A serverless cold start can land while Neon's compute is still asleep or
     # while DATABASE_URL is misconfigured. Don't let that take the whole API
@@ -100,11 +131,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.itm = AppState(
         rulesets=rulesets,
         catalogues=catalogues,
-        curriculum=extract_curriculum(BOOK_PATH),
+        curriculum=curriculum,
         planner_tables=planner_tables,
         step_templates=step_templates,
-        diagnostics=load_diagnostics(CONTENT_DIR),
+        diagnostics=diagnostics,
+        scoring_table=scoring_table,
     )
+    _warn_if_stale(app.state.itm)
     yield
     db.reset_pool()
 
@@ -149,3 +182,4 @@ app.include_router(planner.router)
 app.include_router(chapter_intro.router)
 app.include_router(export.router)
 app.include_router(admin_stats.router)
+app.include_router(admin_diagnostics.router)

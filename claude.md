@@ -7,7 +7,7 @@ A tutoring web app with a **deterministic control layer** between the learner
 profile and the language model. The learner answers a short onboarding
 questionnaire once; a rule engine maps those answers to seven didactic
 parameters; those parameters select fixed prompt clauses that configure an LLM
-tutor. Before each (sub)chapter a 3-4 item rapid diagnostic refines the one
+tutor. Before each chapter a 4-item rapid diagnostic (Kalyuga & Sweller 2004) refines the one
 self-reported prior-knowledge answer for that chapter. The learner can see the
 rules that produced their configuration and override any parameter.
 
@@ -159,32 +159,59 @@ granularity:
    experience, `prior_knowledge_seed`. It is stored on the write-once profile
    and is the level used for any chapter that has no diagnostic.
 2. **Chapter level (per-chapter rapid diagnostic).** Before the first
-   instructional turn of a (sub)chapter the learner answers 3-4 SME-authored
-   multiple-choice items. A fixed scoring table maps
-   `(correct_count, experience)` to a chapter-level `prior_knowledge`, where
-   `experience` is the seed (the chapter has no experience item of its own).
-   That level **replaces** the seed for that chapter's `derive()` call only.
-   It is stored in `chapter_diagnostics`, never in the profile: the seed is
-   not updated, and another chapter's mapping is unaffected.
+   instructional turn of a chapter the learner answers 4 multiple-choice items
+   (Kalyuga & Sweller 2004), one per level, in this order: `recognition`,
+   `classification`, `first_step` (the signature item: the correct answer is
+   the structural first step, distractors are surface moves) and `transfer`.
+   Each has three plausible options (one correct) plus an "I don't know" option
+   that scores 0. A fixed scoring table maps `(correct_count, seed)` to a
+   chapter-level `prior_knowledge`; the chapter has no experience item of its
+   own. That level **replaces** the seed for that chapter's `derive()` call
+   only. It is stored in `chapter_diagnostics`, never in the profile: the seed
+   is not updated, and another chapter's mapping is unaffected.
 
-Everything about a diagnostic is data: `backend/content/<course>/<chapter>/diagnostic.yaml`
-(a subchapter may have `<chapter>/<section>/diagnostic.yaml`; otherwise its
-chapter's applies; no file = no diagnostic, the seed is used). Fields:
-`items[].stem`, `items[].options[].text`, `items[].options[].correct`,
-`scoring_table`. Every item has an explicit "I don't know" option
-(`dont_know: true`) that scores 0. The loader (`core/diagnostic.py`) rejects
-at startup: not 3-4 items, an item without exactly one correct and one
-"I don't know" option, or a scoring table missing any
-`(experience, correct_count)` cell. `content/diagnostic.example.yaml` is the
-annotated template. Scoring is a lookup -- no model inference.
+The diagnostics are **generated offline, reviewed by a human, and committed**
+as static YAML -- the server only reads them:
+
+```
+backend/content/diagnostics/scoring_table.yaml                 shared by all chapters
+backend/content/diagnostics/<course_id>/<chapter_id>.yaml       one per chapter
+```
+
+A chapter file holds `chapter_id`, `course_id`, `source_hash` (sha256 of the
+chapter's concatenated `book_chunks` at generation time), `generator_model`,
+`generated_at` and the four `items` (`id`, `level`, `stem`, `options[]` with
+`text` and, on exactly one, `correct: true`; the fourth option's text is the
+literal `I don't know`, shown to learners as "Ich weiß es nicht").
+`scripts/generate_diagnostics.py` (`make diagnostics`, from `backend/`) reads
+a chapter's chunks, skips it when the existing file's `source_hash` matches,
+otherwise has the LLM draft the items, validates them and writes the YAML.
+Nothing diagnostic-related is written to the database, and the server never
+generates at request time. Note the book's chapters are not database rows:
+the chapter list comes from the PDF outline (`rag/toc.py`), and a chapter's
+text is the `book_chunks` on its page range in page/chunk order
+(`rag/chapter_text.py`).
+
+Validation runs in the generator before writing and again at server startup
+(`core/diagnostic.py`): exactly 4 items, one per level in the fixed order,
+exactly 4 distinct options per item with one correct and one "I don't know",
+non-empty stems, and a scoring table that resolves every (correct 0-4, seed)
+pair exactly once. An invalid file makes the server refuse to start and names
+the file. A chapter whose current content hash differs from `source_hash` is
+**stale**: a startup warning and `GET /api/admin/diagnostics-stale` (admin
+only) report it, but its diagnostic is still served -- regenerating is a
+maintenance action (`make diagnostics-force CHAPTER=<id>`, `make diagnostics-stale`).
+Generated items are drafts: review and edit them before committing. Scoring
+is a lookup -- no model inference.
 
 Flow: `GET /api/diagnostic/{learner_id}` (keyed by the learner's current
 training selection; the answer key is never sent) -> `POST` the chosen option
 indexes -> summary screen showing the result and the chapter vector with
 per-field override (`PUT/DELETE /api/diagnostic/{learner_id}/override[/{param}]`,
 stored per chapter, layered over the learner's global overrides). The result is
-write-once (no retake). Lessons and chat in a selection whose diagnostic is
-pending return `409 diagnostic_required`.
+write-once (no retake). Lessons and chat in a selection whose chapter has a
+diagnostic file the learner has not taken yet return `409 diagnostic_required`;
+a chapter with no file has no diagnostic and uses the seed.
 
 ## Preferences (not in the mapping)
 
@@ -243,7 +270,8 @@ backend/
     store/        repositories, incl. lessons.py
     logging/      session and turn logs
   scripts/        build_book_index.py extract_book_images.py
-  content/        <course>/<chapter>/diagnostic.yaml  (SME-authored)
+  content/        diagnostics/scoring_table.yaml, diagnostics/<course>/<chapter>.yaml
+                  (generated offline, reviewed, committed)
   rules/          ruleset.v1.yaml clauses.v1.yaml planner.v1.yaml step_templates.v1.yaml
   tests/
 frontend/
