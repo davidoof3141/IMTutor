@@ -91,6 +91,18 @@ const INDUSTRY_OPTIONS: { value: Industry; label: string }[] = [
   { value: "neutral", label: "Branchenneutral" },
 ];
 
+/** Kleines „i“ mit Erklärtext bei Hover und Tastaturfokus. */
+function InfoTip({ text }: { text: string }) {
+  return (
+    <span className="info-tip" tabIndex={0} role="img" aria-label={text}>
+      <span aria-hidden="true">i</span>
+      <span className="info-tip-text" role="tooltip">
+        {text}
+      </span>
+    </span>
+  );
+}
+
 interface FieldProps<T extends string> {
   label: string;
   description: string;
@@ -279,9 +291,8 @@ export function OnboardingForm({ onComplete, theme, onToggleTheme }: Props) {
               <div>
                 <div className="field-label">Lerntyp nach Vester</div>
                 <div className="field-description">
-                  Vorliebe, keine Lerneinstellung: Frederic Vester unterscheidet, über welchen Zugang
-                  man Neues am liebsten aufnimmt. Das Modell ist verbreitet, ein Nutzen für den
-                  Lernerfolg ist aber nicht belegt — die Angabe ändert nur die Darbietung.
+                  Vorliebe, keine Lerneinstellung: wie du Neues am liebsten aufnimmst.
+                  <InfoTip text="Frederic Vester unterscheidet Lerntypen nach dem Zugang, über den man Neues am liebsten aufnimmt. Das Modell ist verbreitet, ein Nutzen für den Lernerfolg ist aber nicht belegt — die Angabe ändert nur die Darbietung." />
                 </div>
               </div>
               <div className="option-group" role="radiogroup" aria-label="Lerntyp nach Vester">
@@ -293,9 +304,8 @@ export function OnboardingForm({ onComplete, theme, onToggleTheme }: Props) {
                       checked={learnerType === opt.value}
                       onChange={() => setLearnerType(opt.value)}
                     />
-                    <span>
-                      <strong>{opt.label}</strong> — {opt.vester}
-                    </span>
+                    <span>{opt.label}</span>
+                    <InfoTip text={opt.vester} />
                   </label>
                 ))}
               </div>
