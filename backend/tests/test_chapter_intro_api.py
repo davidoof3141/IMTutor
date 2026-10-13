@@ -9,11 +9,9 @@ def _onboard(client: TestClient) -> dict:
     response = client.post(
         "/api/onboarding",
         json={
-            "role": "practitioner",
-            "prior_experience": "low",
-            "goal": "certification",
+            "prior_knowledge_seed": "low",
+            "learning_goal": "certification",
             "industry": "healthcare",
-            "learner_type": "visuell",
         },
     )
     assert response.status_code == 200, response.text

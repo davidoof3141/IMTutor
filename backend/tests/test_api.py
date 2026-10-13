@@ -8,11 +8,9 @@ def _onboard(client: TestClient) -> dict:
     response = client.post(
         "/api/onboarding",
         json={
-            "role": "practitioner",
-            "prior_experience": "low",
-            "goal": "certification",
+            "prior_knowledge_seed": "low",
+            "learning_goal": "certification",
             "industry": "healthcare",
-            "learner_type": "visuell",
         },
     )
     assert response.status_code == 200
@@ -21,11 +19,9 @@ def _onboard(client: TestClient) -> dict:
 
 def test_onboarding_returns_derived_vector_and_attribution(client: TestClient) -> None:
     body = _onboard(client)
-    assert body["profile"]["role"] == "practitioner"
-    assert body["derived"]["explanation_depth"] == 4  # exp_low rule
-    assert body["attribution"]["explanation_depth"] == "exp_low"
-    assert body["derived"]["register"] == "informal"
-    assert body["attribution"]["register"] == "role_practitioner"
+    assert body["profile"]["prior_knowledge_seed"] == "low"
+    assert body["derived"]["explanation_depth"] == 4  # pk_low rule
+    assert body["attribution"]["explanation_depth"] == "pk_low"
     assert body["derived"]["assessment_frequency"] == "every_topic"
     assert body["attribution"]["assessment_frequency"] == "goal_certification"
     assert body["derived"]["example_domain"] == "healthcare"
@@ -167,7 +163,7 @@ def test_get_config_reflects_overrides(client: TestClient) -> None:
     config = response.json()
     assert config["override"] == {"concreteness": 1}
     assert config["effective"]["concreteness"] == 1
-    assert config["derived"]["concreteness"] == 4  # override must not mutate the derived vector
+    assert config["derived"]["concreteness"] == 3  # override must not mutate the derived vector
 
     response = client.delete(f"/api/config/{learner_id}/override/concreteness")
     assert response.status_code == 200

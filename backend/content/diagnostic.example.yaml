@@ -1,0 +1,47 @@
+# TEMPLATE for a per-chapter rapid diagnostic -- not loaded by the app.
+#
+# Copy to  content/<course>/<chapter>/diagnostic.yaml  (e.g.
+# content/informationsmanagement/3/diagnostic.yaml) for a chapter, or to
+# content/<course>/<chapter>/<section>/diagnostic.yaml (e.g. .../3/3.1/...)
+# for a subchapter that needs its own; a subchapter without one uses its
+# chapter's. Items are SME-authored. A chapter WITHOUT a diagnostic.yaml simply
+# has no diagnostic step: its mapping call uses the onboarding seed.
+#
+# Rules (checked at startup, a violation is a startup error):
+#   - 3 to 4 items; each with exactly one `correct: true` option
+#   - each item has exactly one explicit "I don't know" option (`dont_know:
+#     true`, never correct, scores 0)
+#   - scoring_table is TOTAL: one row per experience level (none/low/moderate/
+#     high -- the learner's onboarding seed) and one column per correct_count
+#     0..len(items). Values are the chapter-level prior_knowledge.
+#   - the table is a plain lookup; there is no model inference in scoring.
+#
+# Option order is shown as written -- shuffle the correct option's position
+# across items yourself. The answer key never leaves the server.
+
+items:
+  - stem: "[Beispiel] Frage 1 zum Kapitel?"
+    options:
+      - { text: "Richtige Antwort", correct: true }
+      - { text: "Falsche Antwort A" }
+      - { text: "Falsche Antwort B" }
+      - { text: "Ich weiß es nicht", dont_know: true }
+  - stem: "[Beispiel] Frage 2 zum Kapitel?"
+    options:
+      - { text: "Falsche Antwort A" }
+      - { text: "Richtige Antwort", correct: true }
+      - { text: "Falsche Antwort B" }
+      - { text: "Ich weiß es nicht", dont_know: true }
+  - stem: "[Beispiel] Frage 3 zum Kapitel?"
+    options:
+      - { text: "Falsche Antwort A" }
+      - { text: "Falsche Antwort B" }
+      - { text: "Richtige Antwort", correct: true }
+      - { text: "Ich weiß es nicht", dont_know: true }
+
+# rows: onboarding seed (experience); columns: number of correct answers
+scoring_table:
+  none:     { 0: none,     1: none,     2: low,      3: moderate }
+  low:      { 0: none,     1: low,      2: moderate, 3: moderate }
+  moderate: { 0: low,      1: moderate, 2: moderate, 3: high }
+  high:     { 0: low,      1: moderate, 2: high,     3: high }

@@ -1,5 +1,13 @@
 version: v1
 
+# Mapping inputs a rule may reference (anything else is a load error):
+#   prior_knowledge    the chapter-level level when a chapter diagnostic has run,
+#                      otherwise the onboarding seed (prior_knowledge_seed)
+#   learning_goal      certification | applied | orientation
+#   retention_horizon  within_2_weeks | 1_to_3_months | long_term
+#   industry           see industry_* below
+# simplified_language / presentation_style are preferences, not mapping inputs.
+
 defaults:
   explanation_depth: 3
   example_density: 3
@@ -9,35 +17,50 @@ defaults:
   assessment_frequency: every_second_topic
 
 rules:
-  - id: exp_low
+  - id: pk_low
     priority: 10
-    when: { prior_experience: [none, low] }
+    when: { prior_knowledge: [none, low] }
     set: { explanation_depth: 4, example_density: 4 }
 
-  - id: exp_high
+  - id: pk_high
     priority: 10
-    when: { prior_experience: high }
+    when: { prior_knowledge: high }
     set: { explanation_depth: 2, example_density: 2 }
 
-  - id: role_practitioner
+  # Explicit neutral middle: states the default outcome so the mapping table
+  # attributes it to the answer instead of showing "Standard".
+  - id: pk_moderate
     priority: 10
-    when: { role: practitioner }
-    set: { concreteness: 4, register: informal }
-
-  - id: role_academic
-    priority: 10
-    when: { role: academic }
-    set: { concreteness: 2, register: formal }
+    when: { prior_knowledge: moderate }
+    set: { explanation_depth: 3, example_density: 3 }
 
   - id: goal_certification
     priority: 8
-    when: { goal: certification }
+    when: { learning_goal: certification }
     set: { assessment_frequency: every_topic }
 
   - id: goal_orientation
     priority: 8
-    when: { goal: orientation }
+    when: { learning_goal: orientation }
     set: { assessment_frequency: on_request }
+
+  # Below the goal rules (priority 8): the goal decides when it states a
+  # preference for checkpoints; the retention horizon decides for "applied",
+  # which has no checkpoint preference of its own.
+  - id: retention_within_2_weeks
+    priority: 7
+    when: { retention_horizon: within_2_weeks }
+    set: { assessment_frequency: on_request }
+
+  - id: retention_1_to_3_months
+    priority: 7
+    when: { retention_horizon: 1_to_3_months }
+    set: { assessment_frequency: every_second_topic }
+
+  - id: retention_long_term
+    priority: 7
+    when: { retention_horizon: long_term }
+    set: { assessment_frequency: every_topic }
 
   # Branche -> Beispielwelt. A deliberate 1:1 pass-through rather than reading
   # profile.industry straight into the prompt: routing it through the rule set
@@ -92,46 +115,3 @@ rules:
     priority: 10
     when: { industry: neutral }
     set: { example_domain: neutral }
-
-  - id: exp_moderate_practitioner_depth
-    priority: 15
-    when: { prior_experience: moderate, role: practitioner }
-    set: { concreteness: 5 }
-
-  - id: learner_visuell
-    priority: 10
-    when: { learner_type: visuell }
-    set: { concreteness: 4 }
-
-  - id: learner_auditiv
-    priority: 10
-    when: { learner_type: auditiv }
-    set: { explanation_depth: 4 }
-
-  - id: learner_kommunikativ
-    priority: 10
-    when: { learner_type: kommunikativ }
-    set: { register: informal }
-
-  - id: learner_motorisch
-    priority: 10
-    when: { learner_type: motorisch }
-    set: { example_density: 5, concreteness: 5 }
-
-  # --- Explicit "neutral middle" rules -------------------------------------
-  # "Analyst:in" and "mittel" are the balanced midpoints of their questions;
-  # left alone they'd fall through to the defaults and the mapping table would
-  # show "Standard". These rules state that outcome explicitly so the learner
-  # sees the answer as the reason. They set exactly the default values, and are
-  # declared LAST on purpose: on a same-priority tie the earlier-declared rule
-  # wins (see core/mapping.py), so any role_*/exp_*/learner_* rule that also
-  # writes the field still takes precedence -- these only fill the gap.
-  - id: role_analyst
-    priority: 10
-    when: { role: analyst }
-    set: { concreteness: 3, register: neutral }
-
-  - id: exp_moderate
-    priority: 10
-    when: { prior_experience: moderate }
-    set: { explanation_depth: 3, example_density: 3 }

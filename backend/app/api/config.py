@@ -8,9 +8,9 @@ from app.api.deps import (
     get_current_user,
     get_repos,
     get_state,
+    resolve_config,
 )
 from app.core.constants import PARAMETER_NAMES
-from app.core.mapping import derive, effective
 from app.core.profile import Profile
 from app.core.vector import (
     AssessmentFrequency,
@@ -20,6 +20,7 @@ from app.core.vector import (
     Override,
     Register,
 )
+from app.store.chapter_diagnostics import StoredDiagnostic
 from app.store.users import User
 
 router = APIRouter(prefix="/api/config", tags=["config"])
@@ -31,6 +32,11 @@ class ConfigResponse(BaseModel):
     override: Override
     effective: ControlVector
     attribution: Attribution
+    # Set while the current training selection has a completed chapter
+    # diagnostic: `derived`/`attribution` were then computed from its
+    # chapter-level prior knowledge, and `effective` also carries the
+    # per-chapter overrides stored on it (`override` is the global part).
+    chapter_diagnostic: StoredDiagnostic | None = None
 
 
 class OverrideRequest(BaseModel):
@@ -50,15 +56,14 @@ def _load_config(learner_id: str, state: AppState, repos: Repos) -> ConfigRespon
     if profile is None:
         raise HTTPException(status_code=404, detail="learner not found")
 
-    ruleset = state.rulesets[profile.ruleset_version]
-    derived, attribution = derive(profile, ruleset)
-    override = repos.overrides.get(learner_id)
+    resolved = resolve_config(profile, state, repos)
     return ConfigResponse(
         profile=profile,
-        derived=derived,
-        override=override,
-        effective=effective(derived, override),
-        attribution=attribution,
+        derived=resolved.derived,
+        override=repos.overrides.get(learner_id),
+        effective=resolved.effective,
+        attribution=resolved.attribution,
+        chapter_diagnostic=resolved.diagnostic,
     )
 
 

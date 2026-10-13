@@ -19,9 +19,10 @@ from app.api.deps import (
     get_current_user,
     get_repos,
     get_state,
+    require_diagnostic_done,
+    resolve_config,
 )
 from app.core.assembler import assemble
-from app.core.mapping import derive, effective
 from app.core.vector import ControlVector
 from app.llm.client import (
     DEFAULT_MODEL,
@@ -179,12 +180,10 @@ def chat(
     if profile is None:
         raise HTTPException(status_code=404, detail="learner not found")
 
-    ruleset = state.rulesets[profile.ruleset_version]
+    require_diagnostic_done(profile, state, repos)
     catalogue = state.catalogues[profile.ruleset_version]
-    derived, _ = derive(profile, ruleset)
-    override = repos.overrides.get(learner_id)
-    vector = effective(derived, override)
-    system_prompt = assemble(vector, catalogue)
+    vector = resolve_config(profile, state, repos).effective
+    system_prompt = assemble(vector, catalogue, profile.preferences)
 
     study_mode = repos.study_mode.get(learner_id)
     setup = _prepare_turn(learner_id, body, state, repos, study_mode)
@@ -332,9 +331,8 @@ def compare(
 
     ruleset = state.rulesets[profile.ruleset_version]
     catalogue = state.catalogues[profile.ruleset_version]
-    derived, _ = derive(profile, ruleset)
-    override = repos.overrides.get(learner_id)
-    personalized_vector = effective(derived, override)
+    require_diagnostic_done(profile, state, repos)
+    personalized_vector = resolve_config(profile, state, repos).effective
     baseline_vector = ControlVector.model_validate(ruleset.defaults)
 
     variant_kinds: list[VariantKind] = ["personalized", "generic"]
@@ -342,8 +340,8 @@ def compare(
     variant_a_kind, variant_b_kind = variant_kinds
     vector_by_kind = {"personalized": personalized_vector, "generic": baseline_vector}
     prompts: dict[VariantLabel, str] = {
-        "a": assemble(vector_by_kind[variant_a_kind], catalogue),
-        "b": assemble(vector_by_kind[variant_b_kind], catalogue),
+        "a": assemble(vector_by_kind[variant_a_kind], catalogue, profile.preferences),
+        "b": assemble(vector_by_kind[variant_b_kind], catalogue, profile.preferences),
     }
 
     study_mode = repos.study_mode.get(learner_id)
@@ -463,7 +461,10 @@ def choose_comparison(
     )
     chosen_vector = ControlVector.model_validate(chosen_vector_json)
     catalogue = state.catalogues[row["ruleset_version"]]
-    system_prompt = assemble(chosen_vector, catalogue)
+    profile = repos.profiles.get(learner_id)
+    system_prompt = assemble(
+        chosen_vector, catalogue, profile.preferences if profile is not None else None
+    )
 
     repos.turn_logs.append(
         build_turn_log(
@@ -536,7 +537,7 @@ def get_suggestions(
 
     catalogue = state.catalogues[profile.ruleset_version]
     vector = current_vector(profile, state, repos)
-    system_prompt = assemble(vector, catalogue)
+    system_prompt = assemble(vector, catalogue, profile.preferences)
 
     history = [
         {"role": "user" if m.role == "learner" else "assistant", "content": m.text}

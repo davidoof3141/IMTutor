@@ -2,12 +2,12 @@ import { useState } from "react";
 import { ApiError, onboard } from "../api/client";
 import type { Theme } from "../theme";
 import type {
-  Goal,
   Industry,
-  LearnerType,
+  LearningGoal,
   OnboardingResponse,
-  PriorExperience,
-  Role,
+  PresentationStyle,
+  PriorKnowledge,
+  RetentionHorizon,
 } from "../types";
 
 interface Props {
@@ -16,23 +16,29 @@ interface Props {
   onToggleTheme: () => void;
 }
 
-const ROLE_OPTIONS: { value: Role; label: string }[] = [
-  { value: "practitioner", label: "Praktiker:in" },
-  { value: "analyst", label: "Analyst:in" },
-  { value: "academic", label: "Wissenschaft" },
-];
-
-const PRIOR_EXPERIENCE_OPTIONS: { value: PriorExperience; label: string }[] = [
+const PRIOR_KNOWLEDGE_OPTIONS: { value: PriorKnowledge; label: string }[] = [
   { value: "none", label: "Keine" },
   { value: "low", label: "Gering" },
   { value: "moderate", label: "Mittel" },
   { value: "high", label: "Hoch" },
 ];
 
-const GOAL_OPTIONS: { value: Goal; label: string }[] = [
+const GOAL_OPTIONS: { value: LearningGoal; label: string }[] = [
   { value: "certification", label: "Zertifikat bestehen" },
-  { value: "applied_competence", label: "Anwendung im Beruf" },
+  { value: "applied", label: "Anwendung im Beruf" },
   { value: "orientation", label: "Überblick gewinnen" },
+];
+
+const RETENTION_OPTIONS: { value: RetentionHorizon; label: string }[] = [
+  { value: "within_2_weeks", label: "Innerhalb von 2 Wochen" },
+  { value: "1_to_3_months", label: "1 bis 3 Monate" },
+  { value: "long_term", label: "Langfristig" },
+];
+
+const STYLE_OPTIONS: { value: PresentationStyle; label: string }[] = [
+  { value: "concise", label: "Knapp" },
+  { value: "balanced", label: "Ausgewogen" },
+  { value: "verbose", label: "Ausführlich" },
 ];
 
 // Kompakte, IT-management-relevante Branchenliste. "neutral" ist die
@@ -48,13 +54,6 @@ const INDUSTRY_OPTIONS: { value: Industry; label: string }[] = [
   { value: "energy", label: "Energie & Versorgung" },
   { value: "consulting", label: "Beratung & Dienstleistung" },
   { value: "neutral", label: "Branchenneutral" },
-];
-
-const LEARNER_TYPE_OPTIONS: { value: LearnerType; label: string }[] = [
-  { value: "visuell", label: "Visuell" },
-  { value: "auditiv", label: "Auditiv" },
-  { value: "kommunikativ", label: "Kommunikativ" },
-  { value: "motorisch", label: "Motorisch" },
 ];
 
 interface FieldProps<T extends string> {
@@ -116,11 +115,15 @@ function OnboardingField<T extends string>({
 }
 
 export function OnboardingForm({ onComplete, theme, onToggleTheme }: Props) {
-  const [role, setRole] = useState<Role>("practitioner");
-  const [priorExperience, setPriorExperience] = useState<PriorExperience>("none");
-  const [goal, setGoal] = useState<Goal>("applied_competence");
+  // Mapping inputs (each starts on the explicit default the server also uses).
+  const [priorKnowledge, setPriorKnowledge] = useState<PriorKnowledge>("none");
+  const [goal, setGoal] = useState<LearningGoal>("applied");
+  const [retention, setRetention] = useState<RetentionHorizon>("1_to_3_months");
+  const [examDate, setExamDate] = useState("");
   const [industry, setIndustry] = useState<Industry>("neutral");
-  const [learnerType, setLearnerType] = useState<LearnerType>("kommunikativ");
+  // Preferences: shape the wording only, never the didactic settings.
+  const [simplifiedLanguage, setSimplifiedLanguage] = useState(false);
+  const [style, setStyle] = useState<PresentationStyle>("balanced");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -130,11 +133,13 @@ export function OnboardingForm({ onComplete, theme, onToggleTheme }: Props) {
     setError(null);
     try {
       const result = await onboard({
-        role,
-        prior_experience: priorExperience,
-        goal,
+        prior_knowledge_seed: priorKnowledge,
+        learning_goal: goal,
+        // A date wins over the band; the server turns it into a band once.
+        ...(examDate ? { exam_date: examDate } : { retention_horizon: retention }),
         industry,
-        learner_type: learnerType,
+        simplified_language: simplifiedLanguage,
+        presentation_style: style,
       });
       onComplete(result);
     } catch (err) {
@@ -174,27 +179,21 @@ export function OnboardingForm({ onComplete, theme, onToggleTheme }: Props) {
           <div className="kicker">Lernprofil einrichten</div>
           <h1>Richte dein Lernprofil ein</h1>
           <p>
-            Fünf Fragen stellen deinen Tutor ein. Jede Antwort steuert eine Einstellung, an die
+            Vier Fragen stellen deinen Tutor ein. Jede Antwort steuert eine Einstellung, an die
             sich der Tutor hält — du kannst später jederzeit nachvollziehen, wie sie zustande kam,
-            und jede Einstellung anpassen.
+            und jede Einstellung anpassen. Dazu zwei Vorlieben zur Darstellung. Vor jedem Kapitel
+            folgt ein kurzer Wissenscheck, der dein Vorwissen für dieses Kapitel genauer bestimmt.
           </p>
         </div>
 
         <form onSubmit={handleSubmit}>
           <div className="onboarding-card">
             <OnboardingField
-              label="Rolle"
-              description="Was beschreibt dich am besten?"
-              value={role}
-              options={ROLE_OPTIONS}
-              onChange={setRole}
-            />
-            <OnboardingField
               label="Vorwissen"
-              description="Wie vertraut bist du mit Informationsmanagement?"
-              value={priorExperience}
-              options={PRIOR_EXPERIENCE_OPTIONS}
-              onChange={setPriorExperience}
+              description="Wie viel Erfahrung hast du allgemein im IT-Management? Das ist nur dein Startwert — pro Kapitel prüft ein kurzer Check genauer."
+              value={priorKnowledge}
+              options={PRIOR_KNOWLEDGE_OPTIONS}
+              onChange={setPriorKnowledge}
             />
             <OnboardingField
               label="Ziel"
@@ -204,6 +203,32 @@ export function OnboardingForm({ onComplete, theme, onToggleTheme }: Props) {
               onChange={setGoal}
             />
             <OnboardingField
+              label="Behalten"
+              description="Wie lange sollst du den Stoff parat haben?"
+              value={retention}
+              options={RETENTION_OPTIONS}
+              onChange={(v) => {
+                setRetention(v);
+                setExamDate("");
+              }}
+            />
+            <div className="onboarding-field">
+              <div>
+                <div className="field-label">Oder Prüfungstermin</div>
+                <div className="field-description">
+                  Optional. Wir ordnen den Termin einmalig einer der Stufen oben zu und speichern
+                  nur die Stufe, nicht das Datum.
+                </div>
+              </div>
+              <input
+                type="date"
+                className="field-select"
+                aria-label="Prüfungstermin"
+                value={examDate}
+                onChange={(e) => setExamDate(e.target.value)}
+              />
+            </div>
+            <OnboardingField
               label="Branche"
               description="In welchem Umfeld arbeitest du? Die Beispiele des Tutors kommen aus dieser Branche."
               value={industry}
@@ -211,12 +236,28 @@ export function OnboardingForm({ onComplete, theme, onToggleTheme }: Props) {
               onChange={setIndustry}
               dropdown
             />
+            <div className="onboarding-field">
+              <div>
+                <div className="field-label">Einfache Sprache</div>
+                <div className="field-description">
+                  Vorliebe, keine Lerneinstellung: kürzere Sätze, Fachbegriffe kurz erklärt.
+                </div>
+              </div>
+              <label className="option-check">
+                <input
+                  type="checkbox"
+                  checked={simplifiedLanguage}
+                  onChange={(e) => setSimplifiedLanguage(e.target.checked)}
+                />
+                <span>Einfache Sprache verwenden</span>
+              </label>
+            </div>
             <OnboardingField
-              label="Lerntyp"
-              description="Wie nimmst du neuen Stoff am liebsten auf?"
-              value={learnerType}
-              options={LEARNER_TYPE_OPTIONS}
-              onChange={setLearnerType}
+              label="Darstellung"
+              description="Vorliebe, keine Lerneinstellung: wie lang die Antworten ausfallen sollen."
+              value={style}
+              options={STYLE_OPTIONS}
+              onChange={setStyle}
             />
           </div>
 

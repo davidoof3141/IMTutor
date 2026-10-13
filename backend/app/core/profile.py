@@ -1,11 +1,17 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
-Role = Literal["practitioner", "analyst", "academic"]
-PriorExperience = Literal["none", "low", "moderate", "high"]
-Goal = Literal["certification", "applied_competence", "orientation"]
+# Self-reported general IT-management experience. At onboarding this is only
+# the SEED; a per-chapter diagnostic (core/diagnostic.py) replaces it for that
+# chapter's mapping call without ever updating the seed.
+PriorKnowledge = Literal["none", "low", "moderate", "high"]
+LearningGoal = Literal["certification", "applied", "orientation"]
+# How long the learner needs the material to stay available. An exam date is
+# converted ONCE at onboarding (band_from_exam_date) and only the band is
+# stored, so derive() never has to read the clock.
+RetentionHorizon = Literal["within_2_weeks", "1_to_3_months", "long_term"]
 # The learner's working context; decides which world the tutor's examples
 # are drawn from (maps to the example_domain control parameter).
 Industry = Literal[
@@ -20,8 +26,37 @@ Industry = Literal[
     "consulting",
     "neutral",
 ]
-# Lerntyp (Vester): how the learner prefers to take in new material.
-LearnerType = Literal["visuell", "auditiv", "kommunikativ", "motorisch"]
+# Preferences: NOT mapping inputs. They only select fixed clauses at prompt
+# assembly (core/assembler.py) and are invisible to derive().
+PresentationStyle = Literal["concise", "balanced", "verbose"]
+
+# The names a rule's `when` block may reference. Deliberately excludes the
+# preferences, so a rule can never be conditioned on them.
+MAPPING_INPUTS = ("prior_knowledge", "learning_goal", "retention_horizon", "industry")
+
+# Explicit defaults for the mapping inputs (also the onboarding form's initial
+# state), so a profile is always complete.
+DEFAULT_PRIOR_KNOWLEDGE_SEED: PriorKnowledge = "none"
+DEFAULT_LEARNING_GOAL: LearningGoal = "applied"
+DEFAULT_RETENTION_HORIZON: RetentionHorizon = "1_to_3_months"
+DEFAULT_INDUSTRY: Industry = "neutral"
+
+_TWO_WEEKS_DAYS = 14
+_THREE_MONTHS_DAYS = 92
+
+
+def band_from_exam_date(exam_date: date, today: date) -> RetentionHorizon:
+    """Converts an exam date to a retention band. `today` is passed in by the
+    onboarding route (the one place that reads the clock); this function and
+    derive() stay clock-free."""
+    days = (exam_date - today).days
+    if days < 0:
+        raise ValueError("exam date lies in the past")
+    if days <= _TWO_WEEKS_DAYS:
+        return "within_2_weeks"
+    if days <= _THREE_MONTHS_DAYS:
+        return "1_to_3_months"
+    return "long_term"
 
 
 class Profile(BaseModel):
@@ -35,10 +70,29 @@ class Profile(BaseModel):
 
     learner_id: str
     user_id: str | None = None
-    role: Role
-    prior_experience: PriorExperience
-    goal: Goal
+    # --- mapping inputs ---
+    prior_knowledge_seed: PriorKnowledge
+    learning_goal: LearningGoal
+    retention_horizon: RetentionHorizon
     industry: Industry
-    learner_type: LearnerType
+    # --- preferences (prompt assembly only) ---
+    simplified_language: bool
+    presentation_style: PresentationStyle
     ruleset_version: str
     created_at: datetime
+
+    @property
+    def preferences(self) -> "Preferences":
+        return Preferences(
+            simplified_language=self.simplified_language,
+            presentation_style=self.presentation_style,
+        )
+
+
+class Preferences(BaseModel):
+    """Presentation preferences: read only by the prompt assembler."""
+
+    model_config = ConfigDict(frozen=True)
+
+    simplified_language: bool
+    presentation_style: PresentationStyle

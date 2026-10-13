@@ -4,15 +4,17 @@ from dataclasses import dataclass
 from fastapi import Depends, HTTPException, Request
 
 from app.core.clauses import ClauseCatalogue
+from app.core.diagnostic import Diagnostic, resolve_diagnostic
 from app.core.mapping import derive, effective
 from app.core.planner import PlannerTable
 from app.core.profile import Profile
 from app.core.rules import RuleSet
 from app.core.step_templates import StepTemplates
-from app.core.vector import ControlVector
+from app.core.vector import Attribution, ControlVector, Override
 from app.rag.toc import Chapter
 from app.security import decode_token
 from app.store.attachments import AttachmentRepository
+from app.store.chapter_diagnostics import ChapterDiagnosticRepository, StoredDiagnostic
 from app.store.comparisons import ComparisonRepository
 from app.store.conversations import ConversationRepository
 from app.store.db import connection, ensure_schema
@@ -23,7 +25,7 @@ from app.store.overrides import OverrideRepository
 from app.store.profiles import ProfileRepository
 from app.store.rate_limit import RateLimitRepository
 from app.store.sessions import SessionRepository
-from app.store.study_mode import StudyModeRepository
+from app.store.study_mode import StudyModeRepository, StudyModeState
 from app.store.turn_logs import TurnLogRepository
 from app.store.users import User, UserRepository
 
@@ -35,6 +37,8 @@ class AppState:
     curriculum: list[Chapter]
     planner_tables: dict[str, PlannerTable]
     step_templates: dict[str, StepTemplates]
+    # "3" / "3.1" -> SME-authored diagnostic (backend/content/); may be empty
+    diagnostics: dict[str, Diagnostic]
 
 
 def get_state(request: Request) -> AppState:
@@ -57,6 +61,7 @@ class Repos:
     attachments: AttachmentRepository
     lessons: LessonRepository
     rate_limits: RateLimitRepository
+    chapter_diagnostics: ChapterDiagnosticRepository
 
 
 def get_repos() -> Iterator[Repos]:
@@ -77,6 +82,7 @@ def get_repos() -> Iterator[Repos]:
             attachments=AttachmentRepository(conn),
             lessons=LessonRepository(conn),
             rate_limits=RateLimitRepository(conn),
+            chapter_diagnostics=ChapterDiagnosticRepository(conn),
         )
 
 
@@ -125,14 +131,75 @@ def require_admin(user: User = Depends(get_current_user)) -> User:
     return user
 
 
-def current_vector(profile: Profile, state: AppState, repos: Repos) -> ControlVector:
-    """The learner's current effective vector (derived + overrides) --
-    shared by every route that needs to assemble a system prompt or compare
-    against a lesson plan's frozen `vector_snapshot`."""
+@dataclass(frozen=True)
+class ResolvedConfig:
+    derived: ControlVector
+    attribution: Attribution
+    override: Override
+    effective: ControlVector
+    # The completed chapter diagnostic this config was derived with, if any.
+    diagnostic: StoredDiagnostic | None
+
+
+def completed_diagnostic(
+    profile: Profile, state: AppState, repos: Repos, study_mode: StudyModeState
+) -> StoredDiagnostic | None:
+    """The learner's stored result for the diagnostic covering their current
+    training selection (None: no selection, no diagnostic authored, or not
+    taken yet)."""
+    if study_mode.mode != "training" or study_mode.chapter_number is None:
+        return None
+    diagnostic = resolve_diagnostic(
+        state.diagnostics, study_mode.chapter_number, study_mode.section_number
+    )
+    if diagnostic is None:
+        return None
+    return repos.chapter_diagnostics.get(profile.learner_id, diagnostic.key)
+
+
+def resolve_config(profile: Profile, state: AppState, repos: Repos) -> ResolvedConfig:
+    """derived + overrides for the learner's current selection -- shared by
+    every route that assembles a system prompt or compares against a lesson
+    plan's frozen `vector_snapshot`.
+
+    With a completed chapter diagnostic the chapter-level prior knowledge
+    replaces the seed for the mapping call; the learner's global overrides are
+    applied next, then the per-chapter overrides from the summary screen."""
+    study_mode = repos.study_mode.get(profile.learner_id)
+    stored = completed_diagnostic(profile, state, repos, study_mode)
     ruleset = state.rulesets[profile.ruleset_version]
-    derived, _ = derive(profile, ruleset)
+    derived, attribution = derive(
+        profile, ruleset, stored.prior_knowledge if stored is not None else None
+    )
     override = repos.overrides.get(profile.learner_id)
-    return effective(derived, override)
+    if stored is not None:
+        override = {**override, **stored.override}
+    return ResolvedConfig(
+        derived=derived,
+        attribution=attribution,
+        override=override,
+        effective=effective(derived, override),
+        diagnostic=stored,
+    )
+
+
+def current_vector(profile: Profile, state: AppState, repos: Repos) -> ControlVector:
+    return resolve_config(profile, state, repos).effective
+
+
+def require_diagnostic_done(profile: Profile, state: AppState, repos: Repos) -> None:
+    """409 while the current training selection has an authored diagnostic the
+    learner has not taken yet: it must run BEFORE the first instructional turn."""
+    study_mode = repos.study_mode.get(profile.learner_id)
+    if study_mode.mode != "training" or study_mode.chapter_number is None:
+        return
+    diagnostic = resolve_diagnostic(
+        state.diagnostics, study_mode.chapter_number, study_mode.section_number
+    )
+    if diagnostic is None:
+        return
+    if repos.chapter_diagnostics.get(profile.learner_id, diagnostic.key) is None:
+        raise HTTPException(status_code=409, detail="diagnostic_required")
 
 
 def authorize_learner(learner_id: str, user: User, repos: Repos) -> None:

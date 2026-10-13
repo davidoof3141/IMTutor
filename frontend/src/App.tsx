@@ -7,6 +7,7 @@ import {
   createLesson,
   getConfig,
   getCurriculum,
+  getDiagnostic,
   getLesson,
   getStudyMode,
   hasPendingLoginLink,
@@ -17,6 +18,7 @@ import { AuthScreen } from "./auth/AuthScreen";
 import { ChangePasswordScreen } from "./auth/ChangePasswordScreen";
 import { useAuth } from "./auth/useAuth";
 import { CurriculumPanel } from "./curriculum/CurriculumPanel";
+import { DiagnosticQuiz, DiagnosticSummary } from "./diagnostic/DiagnosticPanel";
 import { HistorySidebar } from "./history/HistorySidebar";
 import { LessonRail } from "./lesson/LessonRail";
 import { ModeToggle } from "./mode/ModeToggle";
@@ -31,6 +33,8 @@ import { ChatPanel } from "./tutor/ChatPanel";
 import type {
   Chapter,
   ConfigResponse,
+  DiagnosticResult,
+  DiagnosticStatus,
   LessonResponse,
   OnboardingResponse,
   StudyModeName,
@@ -84,6 +88,14 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<View>("session");
   const [setupOpen, setSetupOpen] = useState(true);
+  // The per-chapter diagnostic for one (mode, chapter, section) selection,
+  // tagged with the selection it was loaded for so a stale answer for a
+  // previous selection is never shown.
+  const [diagnostic, setDiagnostic] = useState<{ sel: string; status: DiagnosticStatus } | null>(
+    null,
+  );
+  // Selection whose result summary is on screen (set right after submitting).
+  const [summaryFor, setSummaryFor] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   // null = a fresh, unsaved thread; the server assigns an id on the first turn.
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
@@ -241,6 +253,39 @@ function App() {
       );
   }, [learnerId]);
 
+  // Diagnostic + config for the current training selection. The chapter-level
+  // vector differs per chapter, so the tutor-setup panel is re-read too.
+  const selKey =
+    studyMode?.mode === "training" && studyMode.chapter_number
+      ? `${studyMode.chapter_number}:${studyMode.section_number ?? ""}`
+      : null;
+  useEffect(() => {
+    if (!learnerId || selKey === null) return;
+    getDiagnostic(learnerId)
+      .then((status) => setDiagnostic({ sel: selKey, status }))
+      .catch((err) =>
+        setError(err instanceof ApiError ? err.message : "Der Server ist nicht erreichbar."),
+      );
+    getConfig(learnerId)
+      .then(setConfig)
+      .catch(() => {
+        // Das Panel behält seinen letzten Stand.
+      });
+  }, [learnerId, selKey]);
+
+  function handleDiagnosticResult(sel: string, result: DiagnosticResult) {
+    setDiagnostic((prev) =>
+      prev && prev.sel === sel ? { sel, status: { ...prev.status, result } } : prev,
+    );
+    if (learnerId) {
+      void getConfig(learnerId)
+        .then(setConfig)
+        .catch(() => {
+          // Das Panel behält seinen letzten Stand.
+        });
+    }
+  }
+
   function handleModeChange(mode: StudyModeName) {
     if (!learnerId || !studyMode) return;
     void updateStudyMode(learnerId, {
@@ -324,6 +369,11 @@ function App() {
         (selectedSection ? ` – ${selectedSection.number} ${selectedSection.title}` : "")
       : null;
 
+  const currentDiagnostic = diagnostic && diagnostic.sel === selKey ? diagnostic.status : null;
+  // Instruction (lesson + chat) waits for the chapter's diagnostic, then for
+  // the learner to confirm the summary screen.
+  const diagnosticPending = currentDiagnostic?.required === true && !currentDiagnostic.result;
+  const summaryOpen = currentDiagnostic?.result != null && summaryFor === selKey;
   const showSchedule = studyMode.mode === "training";
   const inSettings = view === "settings" && isAdmin;
 
@@ -408,7 +458,7 @@ function App() {
               onToggleCollapsed={toggleScheduleCollapsed}
               dualMode={dualMode}
             />
-            {!scheduleCollapsed && (
+            {!scheduleCollapsed && !diagnosticPending && !summaryOpen && (
               <LessonRail
                 studyMode={studyMode}
                 lesson={lesson}
@@ -424,20 +474,42 @@ function App() {
 
         <main className="chat-main">
           {error && <p className="error-banner">{error}</p>}
-          <ChatPanel
-            key={chatEpoch}
-            learnerId={learnerId}
-            focusLabel={focusLabel}
-            model={chatModel}
-            studyMode={studyMode}
-            conversationId={activeConversationId}
-            dualMode={dualMode}
-            onConversationResolved={setActiveConversationId}
-            onNewConversation={() => openConversation(null)}
-            newConversationDisabled={activeConversationId === null}
-            historyOpen={historyOpen}
-            onToggleHistory={() => setHistoryOpen((open) => !open)}
-          />
+          {selKey !== null && diagnosticPending && currentDiagnostic && (
+            <DiagnosticQuiz
+              learnerId={learnerId}
+              title={focusLabel ?? "Dieses Kapitel"}
+              items={currentDiagnostic.items}
+              onSubmitted={(result) => {
+                handleDiagnosticResult(selKey, result);
+                setSummaryFor(selKey);
+              }}
+            />
+          )}
+          {selKey !== null && summaryOpen && currentDiagnostic?.result && (
+            <DiagnosticSummary
+              learnerId={learnerId}
+              title={focusLabel ?? "Dieses Kapitel"}
+              result={currentDiagnostic.result}
+              onResultChange={(result) => handleDiagnosticResult(selKey, result)}
+              onContinue={() => setSummaryFor(null)}
+            />
+          )}
+          {!diagnosticPending && !summaryOpen && (
+            <ChatPanel
+              key={chatEpoch}
+              learnerId={learnerId}
+              focusLabel={focusLabel}
+              model={chatModel}
+              studyMode={studyMode}
+              conversationId={activeConversationId}
+              dualMode={dualMode}
+              onConversationResolved={setActiveConversationId}
+              onNewConversation={() => openConversation(null)}
+              newConversationDisabled={activeConversationId === null}
+              historyOpen={historyOpen}
+              onToggleHistory={() => setHistoryOpen((open) => !open)}
+            />
+          )}
         </main>
 
         {setupOpen && (

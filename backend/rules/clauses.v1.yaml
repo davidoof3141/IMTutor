@@ -48,3 +48,14 @@ clauses:
     every_topic: "Biete nach jedem Thema ein kurzes Quiz an."
     every_second_topic: "Biete nach jedem zweiten Thema ein kurzes Quiz an."
     on_request: "Biete nur auf ausdrücklichen Wunsch der lernenden Person ein Quiz an."
+
+# Presentation preferences (NOT control-vector parameters; see Preferences in
+# core/profile.py). Appended by assemble() after the six parameter clauses.
+# simplified_language only has a clause for `true`: off adds nothing.
+preferences:
+  simplified_language:
+    true: "Verwende einfache Sprache: kurze Sätze, geläufige Wörter, und erkläre jeden Fachbegriff beim ersten Gebrauch in einem Halbsatz."
+  presentation_style:
+    concise: "Fasse dich kurz: antworte knapp und beschränke dich auf den Kern der Frage."
+    balanced: "Antworte in mittlerer Länge: so ausführlich wie nötig, so knapp wie möglich."
+    verbose: "Antworte ausführlich und gründlich, mit allen relevanten Details und Zusammenhängen."

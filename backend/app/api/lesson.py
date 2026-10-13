@@ -11,6 +11,7 @@ from app.api.deps import (
     get_current_user,
     get_repos,
     get_state,
+    require_diagnostic_done,
 )
 from app.core.assembler import assemble
 from app.core.constants import CURRENT_PLANNER_VERSION
@@ -91,7 +92,7 @@ def _run_step(
     persists the message and writes the turn log with them."""
     catalogue = state.catalogues[profile.ruleset_version]
     vector = current_vector(profile, state, repos)
-    system_prompt = assemble(vector, catalogue)
+    system_prompt = assemble(vector, catalogue, profile.preferences)
 
     chapter = find_chapter(state.curriculum, plan.chapter_ref)
     if chapter is None:
@@ -182,6 +183,7 @@ def create_lesson(
         raise HTTPException(
             status_code=400, detail="training mode with a chapter selection is required"
         )
+    require_diagnostic_done(profile, state, repos)
     selection = CurriculumSelection(
         chapter_number=study_mode.chapter_number, section_number=study_mode.section_number
     )

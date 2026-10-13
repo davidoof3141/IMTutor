@@ -7,6 +7,11 @@ from app.core.clauses import ClauseCatalogue, load_catalogue
 from app.core.constants import PARAMETER_NAMES
 from app.core.vector import ADMISSIBLE_VALUES
 
+_PREFERENCES = {
+    "simplified_language": {True: "x"},
+    "presentation_style": {"concise": "x", "balanced": "x", "verbose": "x"},
+}
+
 
 def test_shipped_catalogue_is_total(catalogue: ClauseCatalogue) -> None:
     for field in PARAMETER_NAMES:
@@ -26,9 +31,27 @@ def test_incomplete_catalogue_fails_at_load_time(tmp_path: Path) -> None:
             "register": {v: "x" for v in ADMISSIBLE_VALUES["register"]},
             "assessment_frequency": {v: "x" for v in ADMISSIBLE_VALUES["assessment_frequency"]},
         },
+        "preferences": _PREFERENCES,
     }
     path = tmp_path / "clauses.broken.yaml"
     path.write_text(yaml.safe_dump(raw))
 
     with pytest.raises(ValueError, match="explanation_depth"):
+        load_catalogue(path)
+
+
+def test_catalogue_missing_a_preference_clause_fails_at_load_time(tmp_path: Path) -> None:
+    raw = {
+        "version": "broken",
+        "base_instruction": "x",
+        "clauses": {f: {v: "x" for v in ADMISSIBLE_VALUES[f]} for f in PARAMETER_NAMES},
+        "preferences": {
+            "simplified_language": {True: "x"},
+            "presentation_style": {"concise": "x", "balanced": "x"},  # missing verbose
+        },
+    }
+    path = tmp_path / "clauses.broken.yaml"
+    path.write_text(yaml.safe_dump(raw))
+
+    with pytest.raises(ValueError, match="presentation_style"):
         load_catalogue(path)

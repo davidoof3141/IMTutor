@@ -52,9 +52,13 @@ export interface AdminStats {
   override_changes_by_field: OverrideFieldCount[];
 }
 
-export type Role = "practitioner" | "analyst" | "academic";
-export type PriorExperience = "none" | "low" | "moderate" | "high";
-export type Goal = "certification" | "applied_competence" | "orientation";
+// Self-reported general IT-management experience. At onboarding this is only
+// the SEED; a per-chapter diagnostic replaces it for that chapter's mapping.
+export type PriorKnowledge = "none" | "low" | "moderate" | "high";
+export type LearningGoal = "certification" | "applied" | "orientation";
+export type RetentionHorizon = "within_2_weeks" | "1_to_3_months" | "long_term";
+// Preference, not a mapping input: only selects a fixed prompt clause.
+export type PresentationStyle = "concise" | "balanced" | "verbose";
 // The learner's working context; decides which world the tutor's examples
 // are drawn from (maps to the example_domain control parameter).
 export type Industry =
@@ -68,20 +72,20 @@ export type Industry =
   | "energy"
   | "consulting"
   | "neutral";
-// Lerntyp (Vester): how the learner prefers to take in new material.
-export type LearnerType = "visuell" | "auditiv" | "kommunikativ" | "motorisch";
-
 export type Register = "formal" | "neutral" | "informal";
 export type ExampleDomain = Industry;
 export type AssessmentFrequency = "every_topic" | "every_second_topic" | "on_request";
 
 export interface Profile {
   learner_id: string;
-  role: Role;
-  prior_experience: PriorExperience;
-  goal: Goal;
+  // mapping inputs
+  prior_knowledge_seed: PriorKnowledge;
+  learning_goal: LearningGoal;
+  retention_horizon: RetentionHorizon;
   industry: Industry;
-  learner_type: LearnerType;
+  // preferences (prompt assembly only)
+  simplified_language: boolean;
+  presentation_style: PresentationStyle;
   ruleset_version: string;
   created_at: string;
 }
@@ -104,12 +108,46 @@ export interface OnboardingResponse {
   attribution: Attribution;
 }
 
+export interface ChapterDiagnosticInfo {
+  diagnostic_key: string;
+  correct_count: number;
+  experience_seed: PriorKnowledge;
+  /** Chapter-level level; replaced the seed for this chapter's mapping only. */
+  prior_knowledge: PriorKnowledge;
+  override: Override;
+}
+
 export interface ConfigResponse {
   profile: Profile;
   derived: ControlVector;
   override: Override;
   effective: ControlVector;
   attribution: Attribution;
+  chapter_diagnostic?: ChapterDiagnosticInfo | null;
+}
+
+export interface DiagnosticItem {
+  stem: string;
+  options: { text: string }[];
+}
+
+export interface DiagnosticResult {
+  diagnostic_key: string;
+  correct_count: number;
+  item_count: number;
+  experience_seed: PriorKnowledge;
+  prior_knowledge: PriorKnowledge;
+  derived: ControlVector;
+  attribution: Attribution;
+  override: Override;
+  effective: ControlVector;
+}
+
+export interface DiagnosticStatus {
+  required: boolean;
+  key: string | null;
+  items: DiagnosticItem[];
+  result: DiagnosticResult | null;
 }
 
 export interface Rule {

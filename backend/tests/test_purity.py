@@ -37,3 +37,7 @@ def test_rules_has_no_forbidden_imports() -> None:
 
 def test_planner_has_no_forbidden_imports() -> None:
     _assert_no_forbidden_imports(APP_DIR / "core" / "planner.py")
+
+
+def test_diagnostic_scoring_has_no_forbidden_imports() -> None:
+    _assert_no_forbidden_imports(APP_DIR / "core" / "diagnostic.py")

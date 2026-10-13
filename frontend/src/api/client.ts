@@ -12,11 +12,13 @@ import type {
   MeResponse,
   OnboardingResponse,
   Override,
-  Role,
-  PriorExperience,
-  Goal,
+  PriorKnowledge,
+  RetentionHorizon,
+  PresentationStyle,
+  DiagnosticResult,
+  DiagnosticStatus,
+  LearningGoal,
   Industry,
-  LearnerType,
   ReasonTag,
   RulesResponse,
   StudyModeState,
@@ -194,13 +196,48 @@ export function setUserRole(userId: string, role: UserRole): Promise<User> {
 }
 
 export function onboard(answers: {
-  role: Role;
-  prior_experience: PriorExperience;
-  goal: Goal;
+  prior_knowledge_seed: PriorKnowledge;
+  learning_goal: LearningGoal;
+  /** Either a band or an exam date (YYYY-MM-DD); the server converts a date once. */
+  retention_horizon?: RetentionHorizon;
+  exam_date?: string;
   industry: Industry;
-  learner_type: LearnerType;
+  simplified_language: boolean;
+  presentation_style: PresentationStyle;
 }): Promise<OnboardingResponse> {
   return request("/api/onboarding", { method: "POST", body: JSON.stringify(answers) });
+}
+
+export function getDiagnostic(learnerId: string): Promise<DiagnosticStatus> {
+  return request(`/api/diagnostic/${learnerId}`);
+}
+
+export function submitDiagnostic(learnerId: string, answers: number[]): Promise<DiagnosticResult> {
+  return request(`/api/diagnostic/${learnerId}`, {
+    method: "POST",
+    body: JSON.stringify({ answers }),
+  });
+}
+
+export function setDiagnosticOverride(
+  learnerId: string,
+  override: Override,
+): Promise<DiagnosticResult> {
+  return request(`/api/diagnostic/${learnerId}/override`, {
+    method: "PUT",
+    body: JSON.stringify(override),
+  });
+}
+
+export function revertDiagnosticOverrideField(
+  learnerId: string,
+  param: string,
+): Promise<DiagnosticResult> {
+  return request(`/api/diagnostic/${learnerId}/override/${param}`, { method: "DELETE" });
+}
+
+export function resetDiagnosticOverrides(learnerId: string): Promise<DiagnosticResult> {
+  return request(`/api/diagnostic/${learnerId}/override`, { method: "DELETE" });
 }
 
 export function getConfig(learnerId: string): Promise<ConfigResponse> {

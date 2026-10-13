@@ -20,6 +20,7 @@ from app.api import (
     config,
     conversations,
     curriculum,
+    diagnostic,
     export,
     health,
     lesson,
@@ -31,6 +32,7 @@ from app.api import (
 )
 from app.api.deps import AppState
 from app.core.clauses import ClauseCatalogue, load_catalogue
+from app.core.diagnostic import load_diagnostics
 from app.core.planner import PlannerTable, load_planner_table
 from app.core.rules import RuleSet, load_ruleset
 from app.core.step_templates import StepTemplates, load_step_templates
@@ -41,6 +43,7 @@ from app.store import db
 logger = logging.getLogger("app.main")
 
 RULES_DIR = Path(__file__).resolve().parents[1] / "rules"
+CONTENT_DIR = Path(__file__).resolve().parents[1] / "content"
 RULESET_FILENAME = re.compile(r"^ruleset\.(?P<version>.+)\.yaml$")
 PLANNER_FILENAME = re.compile(r"^planner\.(?P<version>.+)\.yaml$")
 STEP_TEMPLATES_FILENAME = re.compile(r"^step_templates\.(?P<version>.+)\.yaml$")
@@ -100,6 +103,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         curriculum=extract_curriculum(BOOK_PATH),
         planner_tables=planner_tables,
         step_templates=step_templates,
+        diagnostics=load_diagnostics(CONTENT_DIR),
     )
     yield
     db.reset_pool()
@@ -131,6 +135,7 @@ app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(onboarding.router)
 app.include_router(config.router)
+app.include_router(diagnostic.router)
 app.include_router(rules.router)
 app.include_router(curriculum.router)
 app.include_router(study_mode.router)

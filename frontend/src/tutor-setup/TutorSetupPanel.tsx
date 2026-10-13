@@ -2,11 +2,16 @@ import { useEffect, useState } from "react";
 import {
   ApiError,
   BASE_URL,
+  getConfig,
   getRules,
+  resetDiagnosticOverrides,
   resetOverrides,
+  revertDiagnosticOverrideField,
   revertOverrideField,
+  setDiagnosticOverride,
   setOverride,
 } from "../api/client";
+import { PARAMS, type ParamKey, type ParamMeta } from "./params";
 import type { ClauseCatalogue, ConfigResponse, ControlVector, LessonResponse, LessonStepKind, Rule } from "../types";
 
 interface Props {
@@ -23,103 +28,35 @@ const STEP_KIND_LABEL: Record<LessonStepKind, string> = {
   recap: "Zusammenfassung",
 };
 
-type ParamKey = keyof ControlVector;
-
-interface ParamMeta {
-  key: ParamKey;
-  name: string;
-  blurb: string;
-  options: (string | number)[];
-  /** Verständliches Wort je Option, in derselben Reihenfolge wie `options`. */
-  labels: string[];
-}
-
-const PARAMS: ParamMeta[] = [
-  {
-    key: "explanation_depth",
-    name: "Detailtiefe",
-    blurb: "Wie ausführlich der Tutor jeden Gedanken erklärt.",
-    options: [1, 2, 3, 4, 5],
-    labels: ["Nur das Wichtigste", "Knapp", "Ausgewogen", "Ausführlich", "Sehr ausführlich"],
-  },
-  {
-    key: "example_density",
-    name: "Beispiele",
-    blurb: "Wie oft der Tutor eine Aussage mit einem Beispiel untermauert.",
-    options: [1, 2, 3, 4, 5],
-    labels: ["Selten", "Gelegentlich", "Ausgewogen", "Oft", "Sehr oft"],
-  },
-  {
-    key: "concreteness",
-    name: "Konkret oder abstrakt",
-    blurb: "Ob der Tutor von realen Situationen oder von allgemeinen Prinzipien ausgeht.",
-    options: [1, 2, 3, 4, 5],
-    labels: ["Sehr abstrakt", "Abstrakt", "Ausgewogen", "Konkret", "Sehr konkret"],
-  },
-  {
-    key: "example_domain",
-    name: "Branche der Beispiele",
-    blurb: "Aus welcher Branche der Tutor seine Beispiele wählt.",
-    options: [
-      "manufacturing",
-      "finance",
-      "public_sector",
-      "healthcare",
-      "retail",
-      "it_software",
-      "logistics",
-      "energy",
-      "consulting",
-      "neutral",
-    ],
-    labels: [
-      "Fertigung & Industrie",
-      "Banken & Versicherungen",
-      "Öffentliche Verwaltung",
-      "Gesundheitswesen",
-      "Handel & E-Commerce",
-      "IT & Software",
-      "Logistik & Transport",
-      "Energie & Versorgung",
-      "Beratung & Dienstleistung",
-      "Branchenneutral",
-    ],
-  },
-  {
-    key: "register",
-    name: "Ton",
-    blurb: "Wie förmlich die Sprache des Tutors ist.",
-    options: ["formal", "neutral", "informal"],
-    labels: ["Förmlich", "Neutral", "Locker"],
-  },
-  {
-    key: "assessment_frequency",
-    name: "Zwischenfragen",
-    blurb: "Wie oft der Tutor prüft, was du verstanden hast.",
-    options: ["every_topic", "every_second_topic", "on_request"],
-    labels: ["Nach jedem Thema", "Nach jedem zweiten Thema", "Nur auf Nachfrage"],
-  },
+const PROFILE_FIELDS: { key: keyof ConfigResponse["profile"]; label: string }[] = [
+  { key: "prior_knowledge_seed", label: "Dein Vorwissen (Startwert)" },
+  { key: "learning_goal", label: "Dein Ziel" },
+  { key: "retention_horizon", label: "Dein Behaltenshorizont" },
+  { key: "industry", label: "Deine Branche" },
 ];
 
-const PROFILE_FIELDS: { key: keyof ConfigResponse["profile"]; label: string }[] = [
-  { key: "role", label: "Du bist" },
-  { key: "prior_experience", label: "Dein Vorwissen" },
-  { key: "goal", label: "Dein Ziel" },
-  { key: "industry", label: "Deine Branche" },
-  { key: "learner_type", label: "Dein Lerntyp" },
+// Vorlieben: nicht Teil der Regelabbildung, nur Formulierung des Prompts.
+const PREFERENCE_FIELDS: { key: keyof ConfigResponse["profile"]; label: string }[] = [
+  { key: "simplified_language", label: "Einfache Sprache" },
+  { key: "presentation_style", label: "Darstellung" },
 ];
 
 const PROFILE_WORDS: Record<string, string> = {
-  practitioner: "Praktiker:in",
-  analyst: "Analyst:in",
-  academic: "Wissenschaft",
   none: "Keine",
   low: "Gering",
   moderate: "Mittel",
   high: "Hoch",
   certification: "Zertifikat bestehen",
-  applied_competence: "Anwendung im Beruf",
+  applied: "Anwendung im Beruf",
   orientation: "Überblick gewinnen",
+  within_2_weeks: "Innerhalb von 2 Wochen",
+  "1_to_3_months": "1 bis 3 Monate",
+  long_term: "Langfristig",
+  concise: "Knapp",
+  balanced: "Ausgewogen",
+  verbose: "Ausführlich",
+  true: "An",
+  false: "Aus",
   manufacturing: "Fertigung & Industrie",
   finance: "Banken & Versicherungen",
   public_sector: "Öffentliche Verwaltung",
@@ -130,19 +67,14 @@ const PROFILE_WORDS: Record<string, string> = {
   energy: "Energie & Versorgung",
   consulting: "Beratung & Dienstleistung",
   neutral: "Branchenneutral",
-  visuell: "Visuell",
-  auditiv: "Auditiv",
-  kommunikativ: "Kommunikativ",
-  motorisch: "Motorisch",
 };
 
-/** Klartext-Bezeichnung eines Profilfelds, für die „Warum"-Sätze. */
+/** Klartext-Bezeichnung eines Regel-Eingangs, für die „Warum"-Sätze. */
 const FIELD_WORDS: Record<string, string> = {
-  role: "Rolle",
-  prior_experience: "Vorwissen",
-  goal: "Ziel",
+  prior_knowledge: "Vorwissen",
+  learning_goal: "Ziel",
+  retention_horizon: "Behaltenshorizont",
   industry: "Branche",
-  learner_type: "Lerntyp",
 };
 
 function profileWord(value: string): string {
@@ -199,21 +131,42 @@ export function TutorSetupPanel({ config, learnerId, onConfigChange, lesson }: P
     }
   }
 
+  // While the current chapter has a diagnostic, edits here belong to that
+  // chapter (its summary-screen overrides win over the global ones); the
+  // diagnostic endpoints return a different shape, so re-read the config.
+  const chapterOverride = config.chapter_diagnostic?.override ?? {};
+  const inChapter = config.chapter_diagnostic != null;
+  const shownOverride: Record<string, unknown> = { ...config.override, ...chapterOverride };
+
   function handleChange(key: ParamKey, rawValue: string) {
     const isNumeric = typeof config.effective[key] === "number";
     const value = isNumeric ? Number(rawValue) : rawValue;
-    void withBusy(key, () => setOverride(learnerId, { [key]: value } as Partial<ControlVector>));
+    const patch = { [key]: value } as Partial<ControlVector>;
+    void withBusy(key, async () => {
+      if (!inChapter) return setOverride(learnerId, patch);
+      await setDiagnosticOverride(learnerId, patch);
+      return getConfig(learnerId);
+    });
   }
 
   function handleRevert(key: ParamKey) {
-    void withBusy(key, () => revertOverrideField(learnerId, key));
+    void withBusy(key, async () => {
+      if (key in chapterOverride) {
+        await revertDiagnosticOverrideField(learnerId, key);
+        return getConfig(learnerId);
+      }
+      return revertOverrideField(learnerId, key);
+    });
   }
 
   function handleResetAll() {
-    void withBusy("__all__", () => resetOverrides(learnerId));
+    void withBusy("__all__", async () => {
+      if (inChapter) await resetDiagnosticOverrides(learnerId);
+      return resetOverrides(learnerId);
+    });
   }
 
-  const hasAnyChange = Object.keys(config.override).length > 0;
+  const hasAnyChange = Object.keys(shownOverride).length > 0;
   const firedRuleIds = Array.from(
     new Set(Object.values(config.attribution).filter((id) => id !== "default")),
   );
@@ -222,7 +175,8 @@ export function TutorSetupPanel({ config, learnerId, onConfigChange, lesson }: P
     <div className="panel setup-panel">
       <h2>So ist dein Tutor eingestellt</h2>
       <p className="setup-intro">
-        Jede Einstellung unten ergibt sich aus den fünf Fragen, die du am Anfang beantwortet hast.
+        Jede Einstellung unten ergibt sich aus den vier Fragen, die du am Anfang beantwortet hast
+        (und, pro Kapitel, aus dem kurzen Wissenscheck davor).
         Du kannst alles ändern — der Tutor übernimmt es sofort, und „Auf Vorschlag zurücksetzen“
         stellt den Ausgangswert wieder her.
       </p>
@@ -240,11 +194,38 @@ export function TutorSetupPanel({ config, learnerId, onConfigChange, lesson }: P
       </div>
 
       <div className="setup-section">
+        <h3>Deine Vorlieben</h3>
+        <p className="muted-note">
+          Diese beiden Angaben ändern nur die Formulierung, nicht die Einstellungen unten.
+        </p>
+        <ul className="answer-list">
+          {PREFERENCE_FIELDS.map((f) => (
+            <li key={f.key}>
+              <span className="answer-label">{f.label}</span>
+              <span className="answer-value">{profileWord(String(config.profile[f.key]))}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {config.chapter_diagnostic && (
+        <div className="setup-section">
+          <h3>Wissenscheck dieses Kapitels</h3>
+          <p className="muted-note">
+            {config.chapter_diagnostic.correct_count} richtig → Vorwissen für dieses Kapitel:{" "}
+            {profileWord(config.chapter_diagnostic.prior_knowledge)} (Startwert war:{" "}
+            {profileWord(config.chapter_diagnostic.experience_seed)}). Der Startwert bleibt
+            unverändert und gilt für Kapitel ohne Check.
+          </p>
+        </div>
+      )}
+
+      <div className="setup-section">
         <h3>Der Unterrichtsstil deines Tutors</h3>
         <div className="setting-list">
           {PARAMS.map((meta) => {
             const value = config.effective[meta.key];
-            const changed = meta.key in config.override;
+            const changed = meta.key in shownOverride;
             const ruleId = config.attribution[meta.key];
             const fromRule = !changed && ruleId !== "default";
             const clause = catalogue?.clauses?.[meta.key]?.[String(value)];
@@ -359,7 +340,7 @@ export function TutorSetupPanel({ config, learnerId, onConfigChange, lesson }: P
                   <td>{p.key}</td>
                   <td>
                     {String(config.effective[p.key])}
-                    {p.key in config.override && (
+                    {p.key in shownOverride && (
                       <span className="override-badge" style={{ marginLeft: 8 }}>
                         geändert
                       </span>

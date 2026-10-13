@@ -7,11 +7,9 @@ from tests.conftest import make_learner
 
 def _onboard(client: TestClient, **overrides: str) -> dict:
     body = {
-        "role": "practitioner",
-        "prior_experience": "low",
-        "goal": "certification",
+        "prior_knowledge_seed": "low",
+        "learning_goal": "certification",
         "industry": "healthcare",
-        "learner_type": "visuell",
     }
     body.update(overrides)
     response = client.post("/api/onboarding", json=body)

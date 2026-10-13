@@ -7,7 +7,7 @@ from tests.conftest import make_profile
 def test_plan_lesson_is_deterministic(
     ruleset: RuleSet, curriculum: Curriculum, planner_table: PlannerTable
 ) -> None:
-    profile = make_profile(role="practitioner", prior_experience="none")
+    profile = make_profile(prior_knowledge_seed="none")
     vector, _ = derive(profile, ruleset)
     chapter = next(c for c in curriculum if c.sections)
     selection = CurriculumSelection(chapter_number=chapter.number)
@@ -22,7 +22,7 @@ def test_plan_lesson_is_deterministic(
 def test_plan_lesson_is_deterministic_for_a_single_section(
     ruleset: RuleSet, curriculum: Curriculum, planner_table: PlannerTable
 ) -> None:
-    profile = make_profile(role="academic", prior_experience="high")
+    profile = make_profile(prior_knowledge_seed="high")
     vector, _ = derive(profile, ruleset)
     chapter = next(c for c in curriculum if c.sections)
     selection = CurriculumSelection(

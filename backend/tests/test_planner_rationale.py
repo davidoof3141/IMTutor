@@ -7,7 +7,7 @@ from tests.conftest import make_profile
 def test_every_step_has_a_rationale_entry(
     ruleset: RuleSet, curriculum: Curriculum, planner_table: PlannerTable
 ) -> None:
-    profile = make_profile(goal="certification")
+    profile = make_profile(learning_goal="certification")
     vector, _ = derive(profile, ruleset)
     chapter = next(c for c in curriculum if c.sections)
     selection = CurriculumSelection(chapter_number=chapter.number)
@@ -19,7 +19,7 @@ def test_every_step_has_a_rationale_entry(
 def test_rationale_attributes_each_kind_to_its_parameter(
     ruleset: RuleSet, curriculum: Curriculum, planner_table: PlannerTable
 ) -> None:
-    profile = make_profile(goal="certification")  # every_topic -> guarantees checkpoints
+    profile = make_profile(learning_goal="certification")  # every_topic -> guarantees checkpoints
     vector, _ = derive(profile, ruleset)
     chapter = next(c for c in curriculum if c.sections)
     selection = CurriculumSelection(chapter_number=chapter.number)
@@ -43,7 +43,7 @@ def test_rationale_attributes_each_kind_to_its_parameter(
 def test_on_request_assessment_frequency_produces_no_checkpoints(
     ruleset: RuleSet, curriculum: Curriculum, planner_table: PlannerTable
 ) -> None:
-    profile = make_profile(goal="orientation")  # -> assessment_frequency = on_request
+    profile = make_profile(learning_goal="orientation")  # -> assessment_frequency = on_request
     vector, _ = derive(profile, ruleset)
     assert vector.assessment_frequency == "on_request"
     chapter = next(c for c in curriculum if c.sections)

@@ -31,28 +31,25 @@ def _select_single_section(curriculum: Curriculum) -> CurriculumSelection:
 # extracted curriculum and returns a CurriculumSelection, so cases stay
 # robust to exact chapter/section numbering rather than hardcoding one.
 CASES = {
-    "novice_practitioner_whole_chapter": (
+    "novice_whole_chapter": (
         make_profile(
-            role="practitioner",
-            prior_experience="none",
-            goal="certification",
+            prior_knowledge_seed="none",
+            learning_goal="certification",
             industry="healthcare",
         ),
         lambda curriculum: CurriculumSelection(
             chapter_number=next(c for c in curriculum if len(c.sections) >= 3).number
         ),
     ),
-    "expert_academic_single_section": (
-        make_profile(
-            role="academic", prior_experience="high", goal="orientation", industry="finance"
+    "expert_single_section": (
+        make_profile( prior_knowledge_seed="high", learning_goal="orientation", industry="finance"
         ),
         _select_single_section,
     ),
-    "moderate_practitioner_applied_long_chapter": (
+    "moderate_applied_long_chapter": (
         make_profile(
-            role="practitioner",
-            prior_experience="moderate",
-            goal="applied_competence",
+            prior_knowledge_seed="moderate",
+            learning_goal="applied",
             industry="manufacturing",
         ),
         lambda curriculum: CurriculumSelection(

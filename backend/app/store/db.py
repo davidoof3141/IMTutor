@@ -67,26 +67,64 @@ CREATE TABLE IF NOT EXISTS login_links (
 CREATE TABLE IF NOT EXISTS profiles (
     learner_id TEXT PRIMARY KEY,
     user_id TEXT REFERENCES users(id),
-    role TEXT NOT NULL,
-    prior_experience TEXT NOT NULL,
-    goal TEXT NOT NULL,
+    -- mapping inputs
+    prior_knowledge_seed TEXT NOT NULL,
+    learning_goal TEXT NOT NULL,
+    retention_horizon TEXT NOT NULL,
     industry TEXT NOT NULL,
-    learner_type TEXT NOT NULL,
+    -- preferences (prompt assembly only; not mapping inputs)
+    simplified_language BOOLEAN NOT NULL,
+    presentation_style TEXT NOT NULL,
     ruleset_version TEXT NOT NULL,
     created_at TEXT NOT NULL
 );
 
--- Poor-man's migration for a database created before learner_type existed --
--- CREATE TABLE IF NOT EXISTS above is a no-op against an existing table, so
--- an already-running deployment needs this to pick the column up. The
--- default only backfills old rows; every new insert passes an explicit
--- value (learner_type has no default at the application layer).
-ALTER TABLE profiles ADD COLUMN IF NOT EXISTS learner_type TEXT NOT NULL DEFAULT 'kommunikativ';
-
--- industry replaced study_time in onboarding. Old rows backfill to
--- 'neutral' (branchenneutral), which is also the rule set's default
--- example_domain, so a pre-existing profile keeps the prompt it had.
+-- Poor-man's migration for databases created before the onboarding rework
+-- (CREATE TABLE IF NOT EXISTS above is a no-op against an existing table).
+-- The new columns get defaults that only backfill old rows; every insert
+-- passes explicit values. role and learner_type no longer feed any parameter
+-- and are kept (nullable) rather than dropped, so older cohorts stay
+-- analysable; prior_experience/goal are carried over below.
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS industry TEXT NOT NULL DEFAULT 'neutral';
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS prior_knowledge_seed TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS learning_goal TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS retention_horizon TEXT NOT NULL DEFAULT '1_to_3_months';
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS simplified_language BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS presentation_style TEXT NOT NULL DEFAULT 'balanced';
+DO $$
+BEGIN
+    ALTER TABLE profiles ALTER COLUMN role DROP NOT NULL;
+    ALTER TABLE profiles ALTER COLUMN learner_type DROP NOT NULL;
+    ALTER TABLE profiles ALTER COLUMN prior_experience DROP NOT NULL;
+    ALTER TABLE profiles ALTER COLUMN goal DROP NOT NULL;
+    UPDATE profiles SET
+        prior_knowledge_seed = prior_experience,
+        learning_goal = CASE goal WHEN 'applied_competence' THEN 'applied' ELSE goal END
+    WHERE prior_knowledge_seed IS NULL;
+EXCEPTION
+    WHEN undefined_column THEN NULL;
+END $$;
+ALTER TABLE profiles ALTER COLUMN prior_knowledge_seed SET NOT NULL;
+ALTER TABLE profiles ALTER COLUMN learning_goal SET NOT NULL;
+
+-- One row per (learner, chapter diagnostic): the answers, the score, and the
+-- chapter-level prior knowledge they produced. Write-once like Profile -- a
+-- diagnostic is not retaken, so the level can't be gamed by trial and error.
+-- It is stored beside the profile, never in it: the seed stays untouched.
+-- `override` holds the learner's per-field overrides of this chapter's vector
+-- (DR6), set on the summary screen.
+CREATE TABLE IF NOT EXISTS chapter_diagnostics (
+    learner_id TEXT NOT NULL,
+    diagnostic_key TEXT NOT NULL,
+    answers JSONB NOT NULL,
+    correct_count INTEGER NOT NULL,
+    experience_seed TEXT NOT NULL,
+    prior_knowledge TEXT NOT NULL,
+    override JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (learner_id, diagnostic_key)
+);
+
 -- study_time is no longer written; kept (nullable) rather than dropped so the
 -- column's history survives for anyone analysing older cohorts. Guarded
 -- because a database created after this change has no such column at all,

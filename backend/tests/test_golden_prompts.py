@@ -18,26 +18,25 @@ from tests.conftest import make_profile
 GOLDEN_DIR = Path(__file__).resolve().parent / "golden"
 
 CASES = {
-    "novice_practitioner_certification": make_profile(
-        role="practitioner",
-        prior_experience="none",
-        goal="certification",
+    "novice_certification_short": make_profile(
+        prior_knowledge_seed="none",
+        learning_goal="certification",
+        retention_horizon="within_2_weeks",
         industry="healthcare",
-        learner_type="visuell",
     ),
-    "expert_academic_orientation": make_profile(
-        role="academic",
-        prior_experience="high",
-        goal="orientation",
+    "expert_orientation": make_profile(
+        prior_knowledge_seed="high",
+        learning_goal="orientation",
+        retention_horizon="long_term",
         industry="finance",
-        learner_type="auditiv",
     ),
-    "moderate_practitioner_applied": make_profile(
-        role="practitioner",
-        prior_experience="moderate",
-        goal="applied_competence",
+    "moderate_applied": make_profile(
+        prior_knowledge_seed="moderate",
+        learning_goal="applied",
+        retention_horizon="long_term",
         industry="manufacturing",
-        learner_type="motorisch",
+        simplified_language=True,
+        presentation_style="concise",
     ),
 }
 
@@ -46,7 +45,7 @@ CASES = {
 def test_golden_prompt(case_name: str, ruleset: RuleSet, catalogue: ClauseCatalogue) -> None:
     profile = CASES[case_name]
     derived, _ = derive(profile, ruleset)
-    prompt = assemble(effective(derived, {}), catalogue)
+    prompt = assemble(effective(derived, {}), catalogue, profile.preferences)
 
     expected = (GOLDEN_DIR / f"{case_name}.txt").read_text()
     assert prompt == expected

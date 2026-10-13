@@ -42,11 +42,9 @@ def _link_learner(raw_client: TestClient, username: str = "linked") -> str:
     onboarded = raw_client.post(
         "/api/onboarding",
         json={
-            "role": "practitioner",
-            "prior_experience": "low",
-            "goal": "certification",
+            "prior_knowledge_seed": "low",
+            "learning_goal": "certification",
             "industry": "healthcare",
-            "learner_type": "visuell",
         },
     )
     assert onboarded.status_code == 200, onboarded.text
@@ -78,11 +76,9 @@ def test_compare_is_unavailable_for_password_accounts(
     onboarded = raw_client.post(
         "/api/onboarding",
         json={
-            "role": "practitioner",
-            "prior_experience": "low",
-            "goal": "certification",
+            "prior_knowledge_seed": "low",
+            "learning_goal": "certification",
             "industry": "healthcare",
-            "learner_type": "visuell",
         },
     )
     learner_id = onboarded.json()["profile"]["learner_id"]

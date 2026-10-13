@@ -24,18 +24,20 @@ class ProfileRepository:
             self._conn.execute(
                 """
                 INSERT INTO profiles
-                    (learner_id, user_id, role, prior_experience, goal, industry,
-                     learner_type, ruleset_version, created_at)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    (learner_id, user_id, prior_knowledge_seed, learning_goal,
+                     retention_horizon, industry, simplified_language,
+                     presentation_style, ruleset_version, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
                     profile.learner_id,
                     profile.user_id,
-                    profile.role,
-                    profile.prior_experience,
-                    profile.goal,
+                    profile.prior_knowledge_seed,
+                    profile.learning_goal,
+                    profile.retention_horizon,
                     profile.industry,
-                    profile.learner_type,
+                    profile.simplified_language,
+                    profile.presentation_style,
                     profile.ruleset_version,
                     profile.created_at.isoformat(),
                 ),
@@ -54,11 +56,12 @@ class ProfileRepository:
         return Profile(
             learner_id=row["learner_id"],
             user_id=row["user_id"],
-            role=row["role"],
-            prior_experience=row["prior_experience"],
-            goal=row["goal"],
+            prior_knowledge_seed=row["prior_knowledge_seed"],
+            learning_goal=row["learning_goal"],
+            retention_horizon=row["retention_horizon"],
             industry=row["industry"],
-            learner_type=row["learner_type"],
+            simplified_language=row["simplified_language"],
+            presentation_style=row["presentation_style"],
             ruleset_version=row["ruleset_version"],
             created_at=row["created_at"],
         )

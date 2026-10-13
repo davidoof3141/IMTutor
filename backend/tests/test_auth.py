@@ -32,11 +32,9 @@ def test_register_then_approval_gate(raw_client: TestClient) -> None:
 
 def test_unauthenticated_requests_are_rejected(raw_client: TestClient) -> None:
     assert raw_client.post("/api/onboarding", json={
-        "role": "practitioner",
-        "prior_experience": "low",
-        "goal": "certification",
+        "prior_knowledge_seed": "low",
+        "learning_goal": "certification",
         "industry": "healthcare",
-        "learner_type": "visuell",
     }).status_code == 401
 
 
@@ -53,11 +51,9 @@ def test_learner_cannot_touch_another_learners_config(raw_client: TestClient) ->
     onboard = raw_client.post(
         "/api/onboarding",
         json={
-            "role": "practitioner",
-            "prior_experience": "low",
-            "goal": "certification",
+            "prior_knowledge_seed": "low",
+            "learning_goal": "certification",
             "industry": "healthcare",
-            "learner_type": "visuell",
         },
         headers={"Authorization": f"Bearer {token_a}"},
     )
@@ -79,11 +75,9 @@ def test_admin_can_reach_any_learner(raw_client: TestClient) -> None:
     learner = raw_client.post(
         "/api/onboarding",
         json={
-            "role": "academic",
-            "prior_experience": "high",
-            "goal": "orientation",
+            "prior_knowledge_seed": "high",
+            "learning_goal": "orientation",
             "industry": "finance",
-            "learner_type": "auditiv",
         },
         headers={"Authorization": f"Bearer {token}"},
     ).json()["profile"]["learner_id"]

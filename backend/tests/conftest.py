@@ -9,7 +9,14 @@ from fastapi.testclient import TestClient
 
 from app.core.clauses import ClauseCatalogue, load_catalogue
 from app.core.planner import PlannerTable, load_planner_table
-from app.core.profile import Goal, Industry, LearnerType, PriorExperience, Profile, Role
+from app.core.profile import (
+    Industry,
+    LearningGoal,
+    PresentationStyle,
+    PriorKnowledge,
+    Profile,
+    RetentionHorizon,
+)
 from app.core.rules import RuleSet, load_ruleset
 from app.core.step_templates import StepTemplates, load_step_templates
 from app.rag.chunking import BOOK_PATH
@@ -150,9 +157,13 @@ def client(raw_client: TestClient) -> TestClient:
     return raw_client
 
 
-ROLES: tuple[Role, ...] = ("practitioner", "analyst", "academic")
-PRIOR_EXPERIENCES: tuple[PriorExperience, ...] = ("none", "low", "moderate", "high")
-GOALS: tuple[Goal, ...] = ("certification", "applied_competence", "orientation")
+PRIOR_KNOWLEDGES: tuple[PriorKnowledge, ...] = ("none", "low", "moderate", "high")
+GOALS: tuple[LearningGoal, ...] = ("certification", "applied", "orientation")
+RETENTION_HORIZONS: tuple[RetentionHorizon, ...] = (
+    "within_2_weeks",
+    "1_to_3_months",
+    "long_term",
+)
 INDUSTRIES: tuple[Industry, ...] = (
     "manufacturing",
     "finance",
@@ -165,7 +176,6 @@ INDUSTRIES: tuple[Industry, ...] = (
     "consulting",
     "neutral",
 )
-LEARNER_TYPES: tuple[LearnerType, ...] = ("visuell", "auditiv", "kommunikativ", "motorisch")
 
 
 @pytest.fixture(scope="session")
@@ -194,33 +204,36 @@ def curriculum() -> list[Chapter]:
 
 
 def make_profile(
-    role: Role = "practitioner",
-    prior_experience: PriorExperience = "none",
-    goal: Goal = "certification",
+    prior_knowledge_seed: PriorKnowledge = "none",
+    learning_goal: LearningGoal = "certification",
+    retention_horizon: RetentionHorizon = "1_to_3_months",
     industry: Industry = "neutral",
-    learner_type: LearnerType = "kommunikativ",
+    simplified_language: bool = False,
+    presentation_style: PresentationStyle = "balanced",
     learner_id: str = "test-learner",
 ) -> Profile:
     return Profile(
         learner_id=learner_id,
-        role=role,
-        prior_experience=prior_experience,
-        goal=goal,
+        prior_knowledge_seed=prior_knowledge_seed,
+        learning_goal=learning_goal,
+        retention_horizon=retention_horizon,
         industry=industry,
-        learner_type=learner_type,
+        simplified_language=simplified_language,
+        presentation_style=presentation_style,
         ruleset_version="v1",
         created_at=datetime(2026, 1, 1, tzinfo=UTC),
     )
 
 
 def all_profiles() -> list[Profile]:
+    """The full mapping-input space (4 x 3 x 3 x 10 = 360). Preferences are not
+    mapping inputs, so they are not enumerated."""
     return [
         make_profile(
-            role=role, prior_experience=exp, goal=goal, industry=industry, learner_type=lt
+            prior_knowledge_seed=pk, learning_goal=goal, retention_horizon=rh, industry=industry
         )
-        for role in ROLES
-        for exp in PRIOR_EXPERIENCES
+        for pk in PRIOR_KNOWLEDGES
         for goal in GOALS
+        for rh in RETENTION_HORIZONS
         for industry in INDUSTRIES
-        for lt in LEARNER_TYPES
     ]

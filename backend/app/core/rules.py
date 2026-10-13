@@ -7,13 +7,14 @@ already-loaded `RuleSet` and touch no I/O, so they stay safe to call from the
 pure `derive()` in mapping.py.
 """
 
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
 import yaml
 from pydantic import BaseModel, ConfigDict
 
-from app.core.profile import Profile
+from app.core.profile import MAPPING_INPUTS
 
 
 class Rule(BaseModel):
@@ -24,9 +25,10 @@ class Rule(BaseModel):
     when: dict[str, list[str]]
     set: dict[str, Any]
 
-    def matches(self, profile: Profile) -> bool:
+    def matches(self, inputs: Mapping[str, str]) -> bool:
+        """`inputs` is the mapping-input dict built by `mapping.mapping_inputs`."""
         for field, admissible in self.when.items():
-            if getattr(profile, field) not in admissible:
+            if inputs[field] not in admissible:
                 return False
         return True
 
@@ -54,4 +56,11 @@ def load_ruleset(path: Path) -> RuleSet:
         Rule(id=r["id"], priority=r["priority"], when=_normalize_when(r["when"]), set=r["set"])
         for r in raw["rules"]
     )
+    for rule in rules:
+        unknown = sorted(set(rule.when) - set(MAPPING_INPUTS))
+        if unknown:
+            raise ValueError(
+                f"Rule {rule.id!r} conditions on {unknown}, which are not mapping inputs "
+                f"({', '.join(MAPPING_INPUTS)})"
+            )
     return RuleSet(version=raw["version"], defaults=raw["defaults"], rules=rules)

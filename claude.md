@@ -7,8 +7,9 @@ A tutoring web app with a **deterministic control layer** between the learner
 profile and the language model. The learner answers a short onboarding
 questionnaire once; a rule engine maps those answers to six didactic
 parameters; those parameters select fixed prompt clauses that configure an LLM
-tutor. The learner can see the rules that produced their configuration and
-override any parameter.
+tutor. Before each (sub)chapter a 3-4 item rapid diagnostic refines the one
+self-reported prior-knowledge answer for that chapter. The learner can see the
+rules that produced their configuration and override any parameter.
 
 This is a research prototype for a master's thesis. The point of the system is
 the control layer's **auditability**, not tutoring quality. Design decisions
@@ -41,6 +42,18 @@ raise it rather than working around it.
 7. **The rule set is data, not code.** Rules live in versioned YAML. Adding a
    rule must never require a Python change.
 
+### Design requirements (DR)
+
+The invariants above are the implementation-level rules; the thesis refers to
+four of them by these names. Keep both in step.
+
+| DR | Requirement | Where it is enforced |
+|----|-------------|----------------------|
+| DR1 | **No in-session performance signal feeds the profile or the vector.** The per-chapter diagnostic runs *before* instruction; nothing answered during instruction (chat, checkpoints, quizzes) is read back. | `Profile` is frozen and write-once; `chapter_diagnostics` is written only by `POST /api/diagnostic`; `tests/test_diagnostic.py::test_instruction_routes_never_write_the_profile_or_diagnostics` |
+| DR2 | **`derive()` is pure, total and deterministic.** No clock reads: an exam date is converted to a retention band once, at onboarding. | invariants 1-2; `tests/test_purity.py`, `test_totality.py`, `test_determinism.py`, `test_onboarding_profile.py::test_identical_profile_gives_byte_equal_vector` |
+| DR4 | **Help on request within a turn stays with the LLM.** The control layer sets the style once; it never decides mid-dialogue to explain more or less. | no code path from a turn back into `derive()` |
+| DR6 | **The profile and the resulting vector are visible to the learner and overridable before instruction.** Applies to the onboarding vector and to each chapter vector (the diagnostic summary screen overrides per field). | scrutability panel; `/api/diagnostic/.../override` |
+
 Note on scope: determinism is a property of the **control layer**, not of the
 generated text. The LLM is stochastic. Never claim otherwise in code comments
 or UI copy.
@@ -48,21 +61,24 @@ or UI copy.
 ## Data model
 
 ```python
-Role            = Literal["practitioner", "analyst", "academic"]
-PriorExperience = Literal["none", "low", "moderate", "high"]
-Goal            = Literal["certification", "applied_competence", "orientation"]
-Industry        = Literal["manufacturing", "finance", "public_sector", "healthcare",
-                          "retail", "it_software", "logistics", "energy",
-                          "consulting", "neutral"]
-LearnerType     = Literal["visuell", "auditiv", "kommunikativ", "motorisch"]
+PriorKnowledge   = Literal["none", "low", "moderate", "high"]
+LearningGoal     = Literal["certification", "applied", "orientation"]
+RetentionHorizon = Literal["within_2_weeks", "1_to_3_months", "long_term"]
+Industry         = Literal["manufacturing", "finance", "public_sector", "healthcare",
+                           "retail", "it_software", "logistics", "energy",
+                           "consulting", "neutral"]
+PresentationStyle = Literal["concise", "balanced", "verbose"]
 
 class Profile(BaseModel):        # immutable
     learner_id: str
-    role: Role
-    prior_experience: PriorExperience
-    goal: Goal
-    industry: Industry
-    learner_type: LearnerType
+    # --- the four mapping inputs ---
+    prior_knowledge_seed: PriorKnowledge   # SEED only; see "Two-layer prior knowledge"
+    learning_goal: LearningGoal
+    retention_horizon: RetentionHorizon    # an exam date is banded ONCE at onboarding
+    industry: Industry                     # drop-down; feeds example_domain
+    # --- preferences: NOT in the mapping ---
+    simplified_language: bool
+    presentation_style: PresentationStyle
     ruleset_version: str         # pinned at onboarding
     created_at: datetime
 
@@ -72,12 +88,16 @@ class ControlVector(BaseModel):
     concreteness: int            # 1-5
     example_domain: Industry     # which industry the tutor's examples are drawn from
     register: Literal["formal", "neutral", "informal"]
-    pacing: int                  # topics per week, 1-3
     assessment_frequency: Literal["every_topic", "every_second_topic", "on_request"]
 
 Attribution = dict[str, str]     # parameter name -> rule id or "default"
 Override    = dict[str, Any]     # sparse; keys are ControlVector fields
 ```
+
+There is no `role`, `learner_type` (Vester Lerntypen: no empirical support) or
+`address_form` any more: nothing in the onboarding feeds them. `concreteness` and `register` therefore have no rule today and
+stay at their defaults unless the learner overrides them -- a rule that
+conditions on a mapping input can be added in YAML without touching Python.
 
 `Profile` is write-once. Changing circumstances means re-onboarding, which
 creates a new profile record — never an in-place update.
@@ -88,18 +108,75 @@ stays reproducible after the rules change.
 ## Core contracts
 
 ```python
-def derive(profile: Profile, ruleset: RuleSet) -> tuple[ControlVector, Attribution]
+def derive(
+    profile: Profile,
+    ruleset: RuleSet,
+    chapter_prior_knowledge: PriorKnowledge | None = None,
+) -> tuple[ControlVector, Attribution]
 def effective(derived: ControlVector, override: Override) -> ControlVector
-def assemble(vector: ControlVector, catalogue: ClauseCatalogue) -> str
+def assemble(vector: ControlVector, catalogue: ClauseCatalogue,
+             preferences: Preferences | None = None) -> str
 ```
 
-`derive` evaluates rules in declared priority order. Where two rules write the
+`derive` evaluates rules in declared priority order. The facts a rule can
+condition on are exactly `prior_knowledge`, `learning_goal`,
+`retention_horizon` and `industry` (`core/profile.py::MAPPING_INPUTS`; a rule
+naming anything else is a load error, so preferences can never reach the
+mapping). `prior_knowledge` is `chapter_prior_knowledge` when a chapter
+diagnostic ran, else `profile.prior_knowledge_seed`. Where two rules write the
 same parameter, the higher priority wins and the attribution records the
 winner. Parameters no rule touches take the catalogue default.
 
 `assemble` performs selection and concatenation only. It must not generate,
 paraphrase, or template-interpolate free text. Output is
-`base_instruction + "\n" + one clause per parameter`, in declared order.
+`base_instruction + "\n" + one clause per parameter`, in declared order, then
+-- if `preferences` is passed -- one fixed clause for `simplified_language`
+(only when on) and one for `presentation_style`.
+
+## Two-layer prior knowledge
+
+Prior knowledge is the one mapping input that is measured twice, at different
+granularity:
+
+1. **Seed (onboarding).** One self-report item on general IT-management
+   experience, `prior_knowledge_seed`. It is stored on the write-once profile
+   and is the level used for any chapter that has no diagnostic.
+2. **Chapter level (per-chapter rapid diagnostic).** Before the first
+   instructional turn of a (sub)chapter the learner answers 3-4 SME-authored
+   multiple-choice items. A fixed scoring table maps
+   `(correct_count, experience)` to a chapter-level `prior_knowledge`, where
+   `experience` is the seed (the chapter has no experience item of its own).
+   That level **replaces** the seed for that chapter's `derive()` call only.
+   It is stored in `chapter_diagnostics`, never in the profile: the seed is
+   not updated, and another chapter's mapping is unaffected.
+
+Everything about a diagnostic is data: `backend/content/<course>/<chapter>/diagnostic.yaml`
+(a subchapter may have `<chapter>/<section>/diagnostic.yaml`; otherwise its
+chapter's applies; no file = no diagnostic, the seed is used). Fields:
+`items[].stem`, `items[].options[].text`, `items[].options[].correct`,
+`scoring_table`. Every item has an explicit "I don't know" option
+(`dont_know: true`) that scores 0. The loader (`core/diagnostic.py`) rejects
+at startup: not 3-4 items, an item without exactly one correct and one
+"I don't know" option, or a scoring table missing any
+`(experience, correct_count)` cell. `content/diagnostic.example.yaml` is the
+annotated template. Scoring is a lookup -- no model inference.
+
+Flow: `GET /api/diagnostic/{learner_id}` (keyed by the learner's current
+training selection; the answer key is never sent) -> `POST` the chosen option
+indexes -> summary screen showing the result and the chapter vector with
+per-field override (`PUT/DELETE /api/diagnostic/{learner_id}/override[/{param}]`,
+stored per chapter, layered over the learner's global overrides). The result is
+write-once (no retake). Lessons and chat in a selection whose diagnostic is
+pending return `409 diagnostic_required`.
+
+## Preferences (not in the mapping)
+
+`simplified_language` and `presentation_style` are collected at onboarding but
+are not mapping inputs, not part of the vector, and cannot be referenced by a
+rule. They only add fixed sentences to the assembled prompt
+(`rules/clauses.v1.yaml`, `preferences:`). The generic baseline arm of the
+comparison study differs from the personalized arm only by the vector, so both
+arms receive the learner's preferences.
 
 ## Rule and clause files
 
@@ -115,14 +192,14 @@ defaults:
   register: neutral
   assessment_frequency: every_second_topic
 rules:
-  - id: exp_low
+  - id: pk_low
     priority: 10
-    when: { prior_experience: [none, low] }
+    when: { prior_knowledge: [none, low] }
     set: { explanation_depth: 4, example_density: 4 }
-  - id: role_practitioner
-    priority: 10
-    when: { role: practitioner }
-    set: { concreteness: 4, register: informal }
+  - id: retention_long_term
+    priority: 7
+    when: { retention_horizon: long_term }
+    set: { assessment_frequency: every_topic }
 ```
 
 `rules/clauses.v1.yaml` maps every admissible value of every parameter to
@@ -141,7 +218,7 @@ backend/
   app/
     main.py
     api/          routes only, no logic
-    core/         profile.py rules.py mapping.py clauses.py assembler.py
+    core/         profile.py rules.py mapping.py clauses.py assembler.py diagnostic.py
                   planner.py step_templates.py  (lesson planning)
     llm/          client.py  (OpenRouter)
     rag/          chunking.py index.py retriever.py toc.py  (book RAG + curriculum)
@@ -149,6 +226,7 @@ backend/
     store/        repositories, incl. lessons.py
     logging/      session and turn logs
   scripts/        build_book_index.py extract_book_images.py
+  content/        <course>/<chapter>/diagnostic.yaml  (SME-authored)
   rules/          ruleset.v1.yaml clauses.v1.yaml planner.v1.yaml step_templates.v1.yaml
   tests/
 frontend/
@@ -163,6 +241,10 @@ FastAPI. Keep framework imports out of it.
 
 ```
 POST   /api/onboarding                    -> profile, derived vector, attribution
+GET    /api/diagnostic/{learner_id}       -> diagnostic for the current selection (+ result)
+POST   /api/diagnostic/{learner_id}       -> answers -> chapter level + chapter vector
+PUT    /api/diagnostic/{learner_id}/override        -> per-chapter override
+DELETE /api/diagnostic/{learner_id}/override[/{param}] -> revert
 GET    /api/config/{learner_id}           -> derived, override, effective, attribution
 PUT    /api/config/{learner_id}/override  -> set one or more parameters
 DELETE /api/config/{learner_id}/override/{param}   -> revert one parameter
@@ -193,8 +275,12 @@ same reason, for the planner table a lesson plan is built from.
 
 Three surfaces:
 
-- **Onboarding** — four closed questions, no free text. Free text would need
-  interpreting and would break invariant 1.
+- **Onboarding** — four mapping questions (prior knowledge seed, goal,
+  retention horizon -- or an exam date, banded once by the server -- and
+  industry as a drop-down) plus the two preferences. No free text: free text
+  would need interpreting and would break invariant 1.
+- **Chapter diagnostic** — quiz, then a summary with per-field override,
+  before the first lesson/chat turn of a chapter that has one.
 - **Tutor chat** — ordinary chat against the configured model. Replies that
   drew on book passages show the source figures inline and a row of page
   reference chips; clicking one opens the textbook PDF in an in-app modal

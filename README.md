@@ -11,6 +11,43 @@ at request time and keeps no in-process cache that must survive between
 requests, so it runs the same way on a serverless function or a long-lived
 container.
 
+## How adaptation works
+
+A profile collected **once, before instruction**, is mapped to a control vector
+by a pure rule set ([backend/app/core/mapping.py](backend/app/core/mapping.py),
+[backend/rules/ruleset.v1.yaml](backend/rules/ruleset.v1.yaml)); the vector
+selects fixed prompt clauses for the LLM tutor. Everything the learner sees
+(profile, fired rules, vector) can be overridden per field before instruction.
+
+**Onboarding** collects four *mapping inputs* -- prior-knowledge seed
+(`none/low/moderate/high`), learning goal (`certification/applied/orientation`),
+retention horizon (`within_2_weeks/1_to_3_months/long_term`; an exam date is
+converted once to one of these bands at onboarding and only the band is
+stored) and industry -- plus two *preferences*.
+
+**Two-layer prior knowledge.** The onboarding answer is only a *seed*. Before
+the first lesson of each (sub)chapter that has a diagnostic, the learner answers
+3-4 SME-authored multiple-choice items (each with an "I don't know" option that
+scores 0). A fixed lookup table `(correct_count, seed) -> level` gives a
+chapter-level prior knowledge that **replaces the seed for that chapter's
+mapping call only**; the seed itself is never updated. A summary screen shows
+the result and the chapter's vector with per-field override. Items and
+scoring table live in `backend/content/<course>/<chapter>/diagnostic.yaml`
+(template: [backend/content/diagnostic.example.yaml](backend/content/diagnostic.example.yaml));
+a chapter without that file simply has no diagnostic and uses the seed.
+
+**Preferences are not in the mapping.** `simplified_language` (on/off) and
+`presentation_style` (`concise/balanced/verbose`) never reach `derive()`; they
+only add two fixed sentences to the assembled prompt.
+
+**Design invariants** (details and enforcing tests in [claude.md](claude.md)):
+
+- **DR1** -- no in-session performance signal feeds the profile or the vector.
+  The diagnostic runs before instruction; answers during instruction are never read back.
+- **DR2** -- `derive()` is pure, total and deterministic; it never reads the clock.
+- **DR4** -- help on request within a turn stays with the LLM.
+- **DR6** -- the profile and the resulting vector are visible and overridable before instruction.
+
 ## Production deployment
 
 One Vercel project, defined by the root [vercel.json](vercel.json), builds and
