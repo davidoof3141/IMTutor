@@ -72,7 +72,8 @@ export type Industry =
   | "energy"
   | "consulting"
   | "neutral";
-export type Register = "formal" | "neutral" | "informal";
+export type Register = "polite" | "direct";
+export type ReviewSchedule = 2 | 7 | 14;
 export type ExampleDomain = Industry;
 export type AssessmentFrequency = "every_topic" | "every_second_topic" | "on_request";
 
@@ -97,6 +98,7 @@ export interface ControlVector {
   example_domain: ExampleDomain;
   register: Register;
   assessment_frequency: AssessmentFrequency;
+  review_schedule: ReviewSchedule;
 }
 
 export type Attribution = Record<keyof ControlVector, string>;

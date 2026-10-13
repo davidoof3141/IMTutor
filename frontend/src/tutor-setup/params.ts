@@ -65,9 +65,9 @@ export const PARAMS: ParamMeta[] = [
   {
     key: "register",
     name: "Ton",
-    blurb: "Wie förmlich die Sprache des Tutors ist.",
-    options: ["formal", "neutral", "informal"],
-    labels: ["Förmlich", "Neutral", "Locker"],
+    blurb: "Wie der Tutor mit dir spricht: zugewandt oder auf den Punkt.",
+    options: ["polite", "direct"],
+    labels: ["Höflich", "Direkt"],
   },
   {
     key: "assessment_frequency",
@@ -75,5 +75,12 @@ export const PARAMS: ParamMeta[] = [
     blurb: "Wie oft der Tutor prüft, was du verstanden hast.",
     options: ["every_topic", "every_second_topic", "on_request"],
     labels: ["Nach jedem Thema", "Nach jedem zweiten Thema", "Nur auf Nachfrage"],
+  },
+  {
+    key: "review_schedule",
+    name: "Wiederholungsabstand",
+    blurb: "Nach wie vielen Tagen der Tutor die nächste Wiederholung vorschlägt.",
+    options: [2, 7, 14],
+    labels: ["Nach 2 Tagen", "Nach 7 Tagen", "Nach 14 Tagen"],
   },
 ];

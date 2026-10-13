@@ -5,7 +5,7 @@
 
 A tutoring web app with a **deterministic control layer** between the learner
 profile and the language model. The learner answers a short onboarding
-questionnaire once; a rule engine maps those answers to six didactic
+questionnaire once; a rule engine maps those answers to seven didactic
 parameters; those parameters select fixed prompt clauses that configure an LLM
 tutor. Before each (sub)chapter a 3-4 item rapid diagnostic refines the one
 self-reported prior-knowledge answer for that chapter. The learner can see the
@@ -31,7 +31,7 @@ raise it rather than working around it.
    `core/rules.py` must not import the LLM client, directly or transitively.
    Enforce with an import test.
 4. **Every parameter value is attributable.** The mapper returns
-   `(vector, attribution)` where attribution maps each of the six parameters
+   `(vector, attribution)` where attribution maps each of the seven parameters
    to the rule id that set it, or to `"default"`.
 5. **Overrides never mutate the derived vector.** Overrides are a sparse dict
    applied over the derived vector to produce the effective vector. The
@@ -87,17 +87,31 @@ class ControlVector(BaseModel):
     example_density: int         # 1-5
     concreteness: int            # 1-5
     example_domain: Industry     # which industry the tutor's examples are drawn from
-    register: Literal["formal", "neutral", "informal"]
+    register: Literal["polite", "direct"]
     assessment_frequency: Literal["every_topic", "every_second_topic", "on_request"]
+    review_schedule: Literal[2, 7, 14]   # gap_days; only a fixed prompt clause consumes it (no planner behaviour yet)
 
 Attribution = dict[str, str]     # parameter name -> rule id or "default"
 Override    = dict[str, Any]     # sparse; keys are ControlVector fields
 ```
 
 There is no `role`, `learner_type` (Vester Lerntypen: no empirical support) or
-`address_form` any more: nothing in the onboarding feeds them. `concreteness` and `register` therefore have no rule today and
-stay at their defaults unless the learner overrides them -- a rule that
-conditions on a mapping input can be added in YAML without touching Python.
+`address_form` any more: nothing in the onboarding feeds them.
+
+Which input drives which parameter (each parameter has exactly one driver):
+
+| Input | Parameter | Rule |
+|-------|-----------|------|
+| `prior_knowledge` | `explanation_depth`, `example_density` | none/low -> 4/4, moderate -> 3/3, high -> 2/2 |
+| `prior_knowledge` | `concreteness` (1-5) | none/low -> 5, moderate -> 3, high -> 1. This is the START value; step-position fading is planned as a planner change (TODO in the ruleset), not implemented. |
+| `prior_knowledge` | `register` | none/low -> `polite`, moderate/high -> `direct` |
+| `learning_goal` | `assessment_frequency` | certification -> every_topic, applied -> every_second_topic, orientation -> on_request |
+| `retention_horizon` | `review_schedule` (gap_days) | within_2_weeks -> 2, 1_to_3_months -> 7, long_term -> 14 |
+| `industry` | `example_domain` | 1:1 |
+
+The concreteness, register and review_schedule rules are new (they replace the
+old role/learner_type rules rather than restoring them). `retention_horizon`
+never touches `assessment_frequency`.
 
 `Profile` is write-once. Changing circumstances means re-onboarding, which
 creates a new profile record — never an in-place update.
@@ -197,9 +211,9 @@ rules:
     when: { prior_knowledge: [none, low] }
     set: { explanation_depth: 4, example_density: 4 }
   - id: retention_long_term
-    priority: 7
+    priority: 10
     when: { retention_horizon: long_term }
-    set: { assessment_frequency: every_topic }
+    set: { review_schedule: 14 }
 ```
 
 `rules/clauses.v1.yaml` maps every admissible value of every parameter to

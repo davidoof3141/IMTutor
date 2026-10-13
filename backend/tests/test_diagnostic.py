@@ -214,12 +214,12 @@ def test_summary_override_is_per_chapter_and_revertible(
     c.post(f"/api/diagnostic/{learner_id}", json={"answers": [0] * len(diagnostic.items)})
     derived = c.get(f"/api/diagnostic/{learner_id}").json()["result"]["derived"]
 
-    r = c.put(f"/api/diagnostic/{learner_id}/override", json={"concreteness": 5})
-    assert r.json()["effective"]["concreteness"] == 5
+    r = c.put(f"/api/diagnostic/{learner_id}/override", json={"concreteness": 2})
+    assert r.json()["effective"]["concreteness"] == 2
     assert r.json()["derived"] == derived  # the derived vector is never mutated
     # per-chapter: chapter 2 is unaffected
     c.put(f"/api/mode/{learner_id}", json={"mode": "training", "chapter_number": "2"})
-    assert c.get(f"/api/config/{learner_id}").json()["effective"]["concreteness"] == 3
+    assert c.get(f"/api/config/{learner_id}").json()["effective"]["concreteness"] == 5
     c.put(f"/api/mode/{learner_id}", json={"mode": "training", "chapter_number": "1"})
 
     r = c.delete(f"/api/diagnostic/{learner_id}/override/concreteness")

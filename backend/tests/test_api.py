@@ -163,7 +163,7 @@ def test_get_config_reflects_overrides(client: TestClient) -> None:
     config = response.json()
     assert config["override"] == {"concreteness": 1}
     assert config["effective"]["concreteness"] == 1
-    assert config["derived"]["concreteness"] == 3  # override must not mutate the derived vector
+    assert config["derived"]["concreteness"] == 5  # override must not mutate the derived vector
 
     response = client.delete(f"/api/config/{learner_id}/override/concreteness")
     assert response.status_code == 200

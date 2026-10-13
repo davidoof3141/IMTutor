@@ -40,17 +40,22 @@ clauses:
     neutral: "Wähle die Beispiele branchenübergreifend und ohne festen Branchenbezug; verwende allgemeine Unternehmensszenarien."
 
   register:
-    formal: "Verwende ein förmliches Register: ganze Sätze, keine Umgangssprache, präzise Terminologie."
-    neutral: "Verwende ein neutrales, professionelles Register."
-    informal: "Verwende ein lockeres, umgangssprachliches Register."
+    polite: "Verwende ein höfliches, zugewandtes Register: ganze Sätze, wertschätzende Formulierungen, keine Umgangssprache."
+    direct: "Verwende ein direktes, sachliches Register: komm ohne Umschweife zum Punkt und verzichte auf Höflichkeitsfloskeln."
 
   assessment_frequency:
     every_topic: "Biete nach jedem Thema ein kurzes Quiz an."
     every_second_topic: "Biete nach jedem zweiten Thema ein kurzes Quiz an."
     on_request: "Biete nur auf ausdrücklichen Wunsch der lernenden Person ein Quiz an."
 
+  # Consumed by this fixed clause only; no planner behaviour (yet).
+  review_schedule:
+    2: "Schlage am Ende jeder Lektion die nächste Wiederholung in 2 Tagen vor."
+    7: "Schlage am Ende jeder Lektion die nächste Wiederholung in 7 Tagen vor."
+    14: "Schlage am Ende jeder Lektion die nächste Wiederholung in 14 Tagen vor."
+
 # Presentation preferences (NOT control-vector parameters; see Preferences in
-# core/profile.py). Appended by assemble() after the six parameter clauses.
+# core/profile.py). Appended by assemble() after the parameter clauses.
 # simplified_language only has a clause for `true`: off adds nothing.
 preferences:
   simplified_language:

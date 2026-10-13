@@ -13,54 +13,62 @@ defaults:
   example_density: 3
   concreteness: 3
   example_domain: neutral
-  register: neutral
+  register: polite
   assessment_frequency: every_second_topic
+  review_schedule: 7
 
 rules:
+  # prior_knowledge -> explanation_depth, example_density, concreteness, register
+  # TODO: step-position-based fading of concreteness (planner change) is
+  # intended on top of the concreteness value set here, which is the START value.
   - id: pk_low
     priority: 10
     when: { prior_knowledge: [none, low] }
-    set: { explanation_depth: 4, example_density: 4 }
+    set: { explanation_depth: 4, example_density: 4, concreteness: 5, register: polite }
+
+  # Explicit middle: states the default depth/density so the mapping table
+  # attributes them to the answer instead of showing "Standard".
+  - id: pk_moderate
+    priority: 10
+    when: { prior_knowledge: moderate }
+    set: { explanation_depth: 3, example_density: 3, concreteness: 3, register: direct }
 
   - id: pk_high
     priority: 10
     when: { prior_knowledge: high }
-    set: { explanation_depth: 2, example_density: 2 }
+    set: { explanation_depth: 2, example_density: 2, concreteness: 1, register: direct }
 
-  # Explicit neutral middle: states the default outcome so the mapping table
-  # attributes it to the answer instead of showing "Standard".
-  - id: pk_moderate
-    priority: 10
-    when: { prior_knowledge: moderate }
-    set: { explanation_depth: 3, example_density: 3 }
-
+  # assessment_frequency is governed by learning_goal ONLY.
   - id: goal_certification
-    priority: 8
+    priority: 10
     when: { learning_goal: certification }
     set: { assessment_frequency: every_topic }
 
+  - id: goal_applied
+    priority: 10
+    when: { learning_goal: applied }
+    set: { assessment_frequency: every_second_topic }
+
   - id: goal_orientation
-    priority: 8
+    priority: 10
     when: { learning_goal: orientation }
     set: { assessment_frequency: on_request }
 
-  # Below the goal rules (priority 8): the goal decides when it states a
-  # preference for checkpoints; the retention horizon decides for "applied",
-  # which has no checkpoint preference of its own.
+  # retention_horizon -> review_schedule (gap_days) ONLY.
   - id: retention_within_2_weeks
-    priority: 7
+    priority: 10
     when: { retention_horizon: within_2_weeks }
-    set: { assessment_frequency: on_request }
+    set: { review_schedule: 2 }
 
   - id: retention_1_to_3_months
-    priority: 7
+    priority: 10
     when: { retention_horizon: 1_to_3_months }
-    set: { assessment_frequency: every_second_topic }
+    set: { review_schedule: 7 }
 
   - id: retention_long_term
-    priority: 7
+    priority: 10
     when: { retention_horizon: long_term }
-    set: { assessment_frequency: every_topic }
+    set: { review_schedule: 14 }
 
   # Branche -> Beispielwelt. A deliberate 1:1 pass-through rather than reading
   # profile.industry straight into the prompt: routing it through the rule set

@@ -10,9 +10,12 @@ from app.core.constants import (
     EXAMPLE_DOMAIN,
     EXPLANATION_DEPTH,
     REGISTER,
+    REVIEW_SCHEDULE,
 )
 
-Register = Literal["formal", "neutral", "informal"]
+Register = Literal["polite", "direct"]
+# Days between reviews (gap_days). Consumed only by a fixed prompt clause for now.
+ReviewSchedule = Literal[2, 7, 14]
 AssessmentFrequency = Literal["every_topic", "every_second_topic", "on_request"]
 # Which industry the tutor's examples are drawn from. Mirrors profile.Industry
 # (the rule set maps one onto the other), but stays a separate type: this is a
@@ -30,7 +33,7 @@ ExampleDomain = Literal[
     "neutral",
 ]
 
-# Our "register" field (formal/neutral/informal register of the tutor's
+# Our "register" field (polite/direct register of the tutor's
 # language) is unrelated to ABCMeta.register(), which pydantic's metaclass
 # also exposes and warns about shadowing. Known-harmless collision.
 warnings.filterwarnings(
@@ -41,7 +44,7 @@ warnings.filterwarnings(
 
 
 class ControlVector(BaseModel):
-    """The six didactic parameters that configure the tutor's prompt."""
+    """The seven didactic parameters that configure the tutor's prompt."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -51,6 +54,7 @@ class ControlVector(BaseModel):
     example_domain: ExampleDomain
     register: Register
     assessment_frequency: AssessmentFrequency
+    review_schedule: ReviewSchedule  # gap_days
 
 
 # parameter name (a ControlVector field) -> rule id, or constants.DEFAULT_ATTRIBUTION
@@ -77,6 +81,7 @@ ADMISSIBLE_VALUES: dict[str, list[Any]] = {
         "consulting",
         "neutral",
     ],
-    REGISTER: ["formal", "neutral", "informal"],
+    REGISTER: ["polite", "direct"],
     ASSESSMENT_FREQUENCY: ["every_topic", "every_second_topic", "on_request"],
+    REVIEW_SCHEDULE: [2, 7, 14],
 }

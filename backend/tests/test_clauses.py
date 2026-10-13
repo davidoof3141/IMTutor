@@ -30,6 +30,7 @@ def test_incomplete_catalogue_fails_at_load_time(tmp_path: Path) -> None:
             "example_domain": {v: "x" for v in ADMISSIBLE_VALUES["example_domain"]},
             "register": {v: "x" for v in ADMISSIBLE_VALUES["register"]},
             "assessment_frequency": {v: "x" for v in ADMISSIBLE_VALUES["assessment_frequency"]},
+            "review_schedule": {v: "x" for v in ADMISSIBLE_VALUES["review_schedule"]},
         },
         "preferences": _PREFERENCES,
     }

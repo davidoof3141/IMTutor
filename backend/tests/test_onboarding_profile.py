@@ -113,3 +113,81 @@ def test_preferences_only_add_fixed_clauses_in_assembly(
 
 def test_mapping_inputs_cover_the_profile_fields_that_feed_rules() -> None:
     assert len(MAPPING_FIELDS) == len(MAPPING_INPUTS) == 4
+
+
+# --- the retention / goal / prior-knowledge rules ---------------------------
+
+
+@pytest.mark.parametrize(
+    "horizon, gap_days",
+    [("within_2_weeks", 2), ("1_to_3_months", 7), ("long_term", 14)],
+)
+def test_retention_horizon_sets_review_schedule_gap_days(
+    ruleset: RuleSet, horizon: str, gap_days: int
+) -> None:
+    vector, attribution = derive(make_profile(retention_horizon=horizon), ruleset)  # type: ignore[arg-type]
+    assert vector.review_schedule == gap_days
+    assert attribution["review_schedule"] == f"retention_{horizon}"
+
+
+@pytest.mark.parametrize(
+    "goal, frequency",
+    [
+        ("certification", "every_topic"),
+        ("applied", "every_second_topic"),
+        ("orientation", "on_request"),
+    ],
+)
+def test_assessment_frequency_depends_on_goal_only(
+    ruleset: RuleSet, goal: str, frequency: str
+) -> None:
+    for horizon in ("within_2_weeks", "1_to_3_months", "long_term"):
+        vector, attribution = derive(
+            make_profile(learning_goal=goal, retention_horizon=horizon),  # type: ignore[arg-type]
+            ruleset,
+        )
+        assert vector.assessment_frequency == frequency
+        assert attribution["assessment_frequency"] == f"goal_{goal}"
+
+
+def test_no_rule_lets_retention_touch_assessment_or_goal_touch_review(ruleset: RuleSet) -> None:
+    for rule in ruleset.rules:
+        if "retention_horizon" in rule.when:
+            assert set(rule.set) == {"review_schedule"}
+        if "learning_goal" in rule.when:
+            assert set(rule.set) == {"assessment_frequency"}
+
+
+@pytest.mark.parametrize(
+    "level, concreteness",
+    [("none", 5), ("low", 5), ("moderate", 3), ("high", 1)],
+)
+def test_prior_knowledge_sets_concreteness(
+    ruleset: RuleSet, level: str, concreteness: int
+) -> None:
+    vector, attribution = derive(make_profile(prior_knowledge_seed=level), ruleset)  # type: ignore[arg-type]
+    assert vector.concreteness == concreteness
+    assert attribution["concreteness"].startswith("pk_")
+
+
+@pytest.mark.parametrize(
+    "level, register",
+    [("none", "polite"), ("low", "polite"), ("moderate", "direct"), ("high", "direct")],
+)
+def test_prior_knowledge_sets_register(ruleset: RuleSet, level: str, register: str) -> None:
+    vector, attribution = derive(make_profile(prior_knowledge_seed=level), ruleset)  # type: ignore[arg-type]
+    assert vector.register == register
+    assert attribution["register"].startswith("pk_")
+
+
+def test_chapter_level_drives_concreteness_and_register_not_the_seed(ruleset: RuleSet) -> None:
+    profile = make_profile(prior_knowledge_seed="none")
+    vector, _ = derive(profile, ruleset, "high")
+    assert (vector.concreteness, vector.register) == (1, "direct")
+
+
+def test_review_schedule_has_a_fixed_prompt_clause(
+    ruleset: RuleSet, catalogue: ClauseCatalogue
+) -> None:
+    vector, _ = derive(make_profile(retention_horizon="long_term"), ruleset)
+    assert "14 Tagen" in assemble(vector, catalogue)

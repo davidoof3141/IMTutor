@@ -18,7 +18,8 @@ def _vector(**overrides: object) -> ControlVector:
         "example_density": 3,
         "concreteness": 3,
         "example_domain": "neutral",
-        "register": "neutral",
+        "register": "polite",
+        "review_schedule": 7,
         "assessment_frequency": "every_second_topic",
     }
     base.update(overrides)

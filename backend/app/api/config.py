@@ -19,6 +19,7 @@ from app.core.vector import (
     ExampleDomain,
     Override,
     Register,
+    ReviewSchedule,
 )
 from app.store.chapter_diagnostics import StoredDiagnostic
 from app.store.users import User
@@ -46,6 +47,7 @@ class OverrideRequest(BaseModel):
     example_domain: ExampleDomain | None = None
     register: Register | None = None
     assessment_frequency: AssessmentFrequency | None = None
+    review_schedule: ReviewSchedule | None = None
 
     def as_sparse_dict(self) -> Override:
         return {k: v for k, v in self.model_dump().items() if v is not None}

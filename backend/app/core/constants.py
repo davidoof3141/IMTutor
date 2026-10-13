@@ -11,6 +11,7 @@ CONCRETENESS = "concreteness"
 EXAMPLE_DOMAIN = "example_domain"
 REGISTER = "register"
 ASSESSMENT_FREQUENCY = "assessment_frequency"
+REVIEW_SCHEDULE = "review_schedule"
 
 PARAMETER_NAMES = (
     EXPLANATION_DEPTH,
@@ -19,6 +20,7 @@ PARAMETER_NAMES = (
     EXAMPLE_DOMAIN,
     REGISTER,
     ASSESSMENT_FREQUENCY,
+    REVIEW_SCHEDULE,
 )
 
 DEFAULT_ATTRIBUTION = "default"
