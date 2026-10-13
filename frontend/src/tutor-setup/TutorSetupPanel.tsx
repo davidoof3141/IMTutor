@@ -31,7 +31,7 @@ const STEP_KIND_LABEL: Record<LessonStepKind, string> = {
 const PROFILE_FIELDS: { key: keyof ConfigResponse["profile"]; label: string }[] = [
   { key: "prior_knowledge_seed", label: "Dein Vorwissen (Startwert)" },
   { key: "learning_goal", label: "Dein Ziel" },
-  { key: "retention_horizon", label: "Dein Behaltenshorizont" },
+  { key: "retention_horizon", label: "Deine Wissensdauer" },
   { key: "industry", label: "Deine Branche" },
 ];
 
@@ -39,6 +39,7 @@ const PROFILE_FIELDS: { key: keyof ConfigResponse["profile"]; label: string }[] 
 const PREFERENCE_FIELDS: { key: keyof ConfigResponse["profile"]; label: string }[] = [
   { key: "simplified_language", label: "Einfache Sprache" },
   { key: "presentation_style", label: "Darstellung" },
+  { key: "learner_type", label: "Lerntyp (nach Vester)" },
 ];
 
 const PROFILE_WORDS: Record<string, string> = {
@@ -49,9 +50,13 @@ const PROFILE_WORDS: Record<string, string> = {
   certification: "Zertifikat bestehen",
   applied: "Anwendung im Beruf",
   orientation: "Überblick gewinnen",
-  within_2_weeks: "Innerhalb von 2 Wochen",
-  "1_to_3_months": "1 bis 3 Monate",
-  long_term: "Langfristig",
+  within_2_weeks: "Kurzfristig (bis 2 Wochen)",
+  "1_to_3_months": "Mittelfristig (1–3 Monate)",
+  long_term: "Langfristig (über 3 Monate)",
+  visuell: "Visuell",
+  auditiv: "Auditiv",
+  kommunikativ: "Kommunikativ",
+  motorisch: "Motorisch",
   concise: "Knapp",
   balanced: "Ausgewogen",
   verbose: "Ausführlich",
@@ -73,7 +78,7 @@ const PROFILE_WORDS: Record<string, string> = {
 const FIELD_WORDS: Record<string, string> = {
   prior_knowledge: "Vorwissen",
   learning_goal: "Ziel",
-  retention_horizon: "Behaltenshorizont",
+  retention_horizon: "Wissensdauer",
   industry: "Branche",
 };
 

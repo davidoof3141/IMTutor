@@ -79,6 +79,7 @@ class Profile(BaseModel):        # immutable
     # --- preferences: NOT in the mapping ---
     simplified_language: bool
     presentation_style: PresentationStyle
+    learner_type: LearnerType              # Vester; "none" | visuell | auditiv | kommunikativ | motorisch
     ruleset_version: str         # pinned at onboarding
     created_at: datetime
 
@@ -95,8 +96,10 @@ Attribution = dict[str, str]     # parameter name -> rule id or "default"
 Override    = dict[str, Any]     # sparse; keys are ControlVector fields
 ```
 
-There is no `role`, `learner_type` (Vester Lerntypen: no empirical support) or
-`address_form` any more: nothing in the onboarding feeds them.
+There is no `role` or `address_form` any more: nothing in the onboarding feeds
+them. `learner_type` (Lerntyp nach Vester) is back, but only as a prompt-only
+preference (below), never a mapping input: the model has no empirical support
+for matching instruction to type, so it must not drive the didactic parameters.
 
 Which input drives which parameter (each parameter has exactly one driver):
 
@@ -110,7 +113,7 @@ Which input drives which parameter (each parameter has exactly one driver):
 | `industry` | `example_domain` | 1:1 |
 
 The concreteness, register and review_schedule rules are new (they replace the
-old role/learner_type rules rather than restoring them). `retention_horizon`
+old role and learner-type rules rather than restoring them). `retention_horizon`
 never touches `assessment_frequency`.
 
 `Profile` is write-once. Changing circumstances means re-onboarding, which
@@ -145,7 +148,7 @@ winner. Parameters no rule touches take the catalogue default.
 paraphrase, or template-interpolate free text. Output is
 `base_instruction + "\n" + one clause per parameter`, in declared order, then
 -- if `preferences` is passed -- one fixed clause for `simplified_language`
-(only when on) and one for `presentation_style`.
+(only when on), one for `presentation_style` and, unless `none`, one for `learner_type`.
 
 ## Two-layer prior knowledge
 
@@ -185,7 +188,7 @@ pending return `409 diagnostic_required`.
 
 ## Preferences (not in the mapping)
 
-`simplified_language` and `presentation_style` are collected at onboarding but
+`simplified_language`, `presentation_style` and `learner_type` (Vester) are collected at onboarding but
 are not mapping inputs, not part of the vector, and cannot be referenced by a
 rule. They only add fixed sentences to the assembled prompt
 (`rules/clauses.v1.yaml`, `preferences:`). The generic baseline arm of the
@@ -291,7 +294,7 @@ Three surfaces:
 
 - **Onboarding** — four mapping questions (prior knowledge seed, goal,
   retention horizon and
-  industry as a drop-down) plus the two preferences. No free text: free text
+  industry as a drop-down) plus the three preferences. No free text: free text
   would need interpreting and would break invariant 1.
 - **Chapter diagnostic** — quiz, then a summary with per-field override,
   before the first lesson/chat turn of a chapter that has one.

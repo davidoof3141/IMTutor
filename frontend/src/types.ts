@@ -59,6 +59,8 @@ export type LearningGoal = "certification" | "applied" | "orientation";
 export type RetentionHorizon = "within_2_weeks" | "1_to_3_months" | "long_term";
 // Preference, not a mapping input: only selects a fixed prompt clause.
 export type PresentationStyle = "concise" | "balanced" | "verbose";
+// Lerntyp nach Vester; a preference like the above ("none" = keine Angabe).
+export type LearnerType = "none" | "visuell" | "auditiv" | "kommunikativ" | "motorisch";
 // The learner's working context; decides which world the tutor's examples
 // are drawn from (maps to the example_domain control parameter).
 export type Industry =
@@ -87,6 +89,7 @@ export interface Profile {
   // preferences (prompt assembly only)
   simplified_language: boolean;
   presentation_style: PresentationStyle;
+  learner_type: LearnerType;
   ruleset_version: string;
   created_at: string;
 }

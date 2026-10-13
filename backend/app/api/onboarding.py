@@ -13,6 +13,7 @@ from app.core.profile import (
     DEFAULT_PRIOR_KNOWLEDGE_SEED,
     DEFAULT_RETENTION_HORIZON,
     Industry,
+    LearnerType,
     LearningGoal,
     PresentationStyle,
     PriorKnowledge,
@@ -35,6 +36,7 @@ class OnboardingRequest(BaseModel):
     industry: Industry = DEFAULT_INDUSTRY
     simplified_language: bool = False
     presentation_style: PresentationStyle = "balanced"
+    learner_type: LearnerType = "none"
 
 
 class OnboardingResponse(BaseModel):
@@ -60,6 +62,7 @@ def onboard(
         industry=body.industry,
         simplified_language=body.simplified_language,
         presentation_style=body.presentation_style,
+        learner_type=body.learner_type,
         ruleset_version=CURRENT_RULESET_VERSION,
         created_at=now,
     )

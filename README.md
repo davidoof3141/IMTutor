@@ -21,7 +21,7 @@ selects fixed prompt clauses for the LLM tutor. Everything the learner sees
 
 **Onboarding** collects four *mapping inputs* -- prior-knowledge seed
 (`none/low/moderate/high`), learning goal (`certification/applied/orientation`),
-retention horizon (`within_2_weeks/1_to_3_months/long_term`) and industry -- plus two *preferences*.
+retention horizon (`within_2_weeks/1_to_3_months/long_term`) and industry -- plus three *preferences*.
 
 **Two-layer prior knowledge.** The onboarding answer is only a *seed*. Before
 the first lesson of each (sub)chapter that has a diagnostic, the learner answers
@@ -34,9 +34,10 @@ scoring table live in `backend/content/<course>/<chapter>/diagnostic.yaml`
 (template: [backend/content/diagnostic.example.yaml](backend/content/diagnostic.example.yaml));
 a chapter without that file simply has no diagnostic and uses the seed.
 
-**Preferences are not in the mapping.** `simplified_language` (on/off) and
-`presentation_style` (`concise/balanced/verbose`) never reach `derive()`; they
-only add two fixed sentences to the assembled prompt.
+**Preferences are not in the mapping.** `simplified_language` (on/off),
+`presentation_style` (`concise/balanced/verbose`) and `learner_type` (Lerntyp
+nach Vester: visuell/auditiv/kommunikativ/motorisch/none) never reach
+`derive()`; they only add fixed sentences to the assembled prompt.
 
 **Design invariants** (details and enforcing tests in [claude.md](claude.md)):
 

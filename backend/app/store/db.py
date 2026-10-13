@@ -75,6 +75,7 @@ CREATE TABLE IF NOT EXISTS profiles (
     -- preferences (prompt assembly only; not mapping inputs)
     simplified_language BOOLEAN NOT NULL,
     presentation_style TEXT NOT NULL,
+    learner_type TEXT NOT NULL DEFAULT 'none',
     ruleset_version TEXT NOT NULL,
     created_at TEXT NOT NULL
 );
@@ -82,8 +83,8 @@ CREATE TABLE IF NOT EXISTS profiles (
 -- Poor-man's migration for databases created before the onboarding rework
 -- (CREATE TABLE IF NOT EXISTS above is a no-op against an existing table).
 -- The new columns get defaults that only backfill old rows; every insert
--- passes explicit values. role and learner_type no longer feed any parameter
--- and are kept (nullable) rather than dropped, so older cohorts stay
+-- passes explicit values. role no longer feeds any parameter and is kept
+-- (nullable) rather than dropped, so older cohorts stay
 -- analysable; prior_experience/goal are carried over below.
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS industry TEXT NOT NULL DEFAULT 'neutral';
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS prior_knowledge_seed TEXT;

@@ -21,7 +21,8 @@ def test_onboarding_with_no_answers_yields_explicit_defaults(client: TestClient)
     assert profile["industry"] == "neutral"
     assert profile["simplified_language"] is False
     assert profile["presentation_style"] == "balanced"
-    for removed in ("role", "learner_type", "address_form", "prior_experience", "goal"):
+    assert profile["learner_type"] == "none"
+    for removed in ("role", "address_form", "prior_experience", "goal"):
         assert removed not in profile
 
 
@@ -33,6 +34,7 @@ def test_onboarding_stores_all_four_inputs_and_both_preferences(client: TestClie
         "industry": "energy",
         "simplified_language": True,
         "presentation_style": "verbose",
+        "learner_type": "auditiv",
     }
     learner_id = client.post("/api/onboarding", json=sent).json()["profile"]["learner_id"]
     stored = client.get(f"/api/config/{learner_id}").json()["profile"]
@@ -58,10 +60,16 @@ def test_preferences_never_reach_the_mapping(ruleset: RuleSet) -> None:
     base = derive(make_profile(), ruleset)
     for style in ("concise", "balanced", "verbose"):
         for simple in (True, False):
-            other = derive(
-                make_profile(simplified_language=simple, presentation_style=style), ruleset  # type: ignore[arg-type]
-            )
-            assert other == base
+            for learner_type in ("none", "visuell", "auditiv", "kommunikativ", "motorisch"):
+                other = derive(
+                    make_profile(
+                        simplified_language=simple,
+                        presentation_style=style,  # type: ignore[arg-type]
+                        learner_type=learner_type,  # type: ignore[arg-type]
+                    ),
+                    ruleset,
+                )
+                assert other == base
     for rule in ruleset.rules:
         assert set(rule.when) <= set(MAPPING_INPUTS)
 
@@ -69,7 +77,9 @@ def test_preferences_never_reach_the_mapping(ruleset: RuleSet) -> None:
 def test_preferences_only_add_fixed_clauses_in_assembly(
     ruleset: RuleSet, catalogue: ClauseCatalogue
 ) -> None:
-    profile = make_profile(simplified_language=True, presentation_style="concise")
+    profile = make_profile(
+        simplified_language=True, presentation_style="concise", learner_type="visuell"
+    )
     vector, _ = derive(profile, ruleset)
     plain = assemble(vector, catalogue)
     with_prefs = assemble(vector, catalogue, profile.preferences)
@@ -78,6 +88,7 @@ def test_preferences_only_add_fixed_clauses_in_assembly(
     assert extra == [
         catalogue.preferences["simplified_language"][True],
         catalogue.preferences["presentation_style"]["concise"],
+        catalogue.preferences["learner_type"]["visuell"],
     ]
 
 

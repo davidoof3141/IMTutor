@@ -15,6 +15,7 @@ import type {
   PriorKnowledge,
   RetentionHorizon,
   PresentationStyle,
+  LearnerType,
   DiagnosticResult,
   DiagnosticStatus,
   LearningGoal,
@@ -202,6 +203,7 @@ export function onboard(answers: {
   industry: Industry;
   simplified_language: boolean;
   presentation_style: PresentationStyle;
+  learner_type: LearnerType;
 }): Promise<OnboardingResponse> {
   return request("/api/onboarding", { method: "POST", body: JSON.stringify(answers) });
 }

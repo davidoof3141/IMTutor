@@ -3,6 +3,7 @@ import { ApiError, onboard } from "../api/client";
 import type { Theme } from "../theme";
 import type {
   Industry,
+  LearnerType,
   LearningGoal,
   OnboardingResponse,
   PresentationStyle,
@@ -30,9 +31,43 @@ const GOAL_OPTIONS: { value: LearningGoal; label: string }[] = [
 ];
 
 const RETENTION_OPTIONS: { value: RetentionHorizon; label: string }[] = [
-  { value: "within_2_weeks", label: "Innerhalb von 2 Wochen" },
-  { value: "1_to_3_months", label: "1 bis 3 Monate" },
-  { value: "long_term", label: "Langfristig" },
+  { value: "within_2_weeks", label: "Kurzfristig (bis 2 Wochen)" },
+  { value: "1_to_3_months", label: "Mittelfristig (1–3 Monate)" },
+  { value: "long_term", label: "Langfristig (über 3 Monate)" },
+];
+
+// Lerntypen nach Frederic Vester ("Denken, Lernen, Vergessen"): welcher Sinneskanal
+// beim Aufnehmen von Neuem für dich am besten funktioniert.
+const LEARNER_TYPE_OPTIONS: { value: LearnerType; label: string; vester: string }[] = [
+  {
+    value: "none",
+    label: "Keine Angabe",
+    vester: "Der Tutor erklärt, ohne einen bestimmten Zugang zu bevorzugen.",
+  },
+  {
+    value: "visuell",
+    label: "Visuell",
+    vester:
+      "Du lernst über das Sehen: Bilder, Diagramme, Tabellen und klare Gliederungen helfen dir, Neues zu behalten. Der Tutor veranschaulicht bildhaft.",
+  },
+  {
+    value: "auditiv",
+    label: "Auditiv",
+    vester:
+      "Du lernst über das Hören: Erklärungen, Vorträge und Merksätze bleiben dir besser im Gedächtnis als Gelesenes. Der Tutor erklärt im Vortragston.",
+  },
+  {
+    value: "kommunikativ",
+    label: "Kommunikativ",
+    vester:
+      "Du lernst im Austausch: Diskutieren, Nachfragen und Erklären in eigenen Worten festigen dein Wissen. Der Tutor arbeitet im Dialog.",
+  },
+  {
+    value: "motorisch",
+    label: "Motorisch",
+    vester:
+      "Du lernst durch Handeln: Ausprobieren, Selbermachen und Durchrechnen bringen dir mehr als Zuschauen. Der Tutor stellt kleine Aufgaben zum Mitmachen.",
+  },
 ];
 
 const STYLE_OPTIONS: { value: PresentationStyle; label: string }[] = [
@@ -123,6 +158,7 @@ export function OnboardingForm({ onComplete, theme, onToggleTheme }: Props) {
   // Preferences: shape the wording only, never the didactic settings.
   const [simplifiedLanguage, setSimplifiedLanguage] = useState(false);
   const [style, setStyle] = useState<PresentationStyle>("balanced");
+  const [learnerType, setLearnerType] = useState<LearnerType>("none");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -138,6 +174,7 @@ export function OnboardingForm({ onComplete, theme, onToggleTheme }: Props) {
         industry,
         simplified_language: simplifiedLanguage,
         presentation_style: style,
+        learner_type: learnerType,
       });
       onComplete(result);
     } catch (err) {
@@ -179,7 +216,7 @@ export function OnboardingForm({ onComplete, theme, onToggleTheme }: Props) {
           <p>
             Vier Fragen stellen deinen Tutor ein. Jede Antwort steuert eine Einstellung, an die
             sich der Tutor hält — du kannst später jederzeit nachvollziehen, wie sie zustande kam,
-            und jede Einstellung anpassen. Dazu zwei Vorlieben zur Darstellung. Vor jedem Kapitel
+            und jede Einstellung anpassen. Dazu drei Vorlieben zur Darstellung. Vor jedem Kapitel
             folgt ein kurzer Wissenscheck, der dein Vorwissen für dieses Kapitel genauer bestimmt.
           </p>
         </div>
@@ -201,8 +238,8 @@ export function OnboardingForm({ onComplete, theme, onToggleTheme }: Props) {
               onChange={setGoal}
             />
             <OnboardingField
-              label="Behalten"
-              description="Wie lange sollst du den Stoff parat haben?"
+              label="Wissensdauer"
+              description="Wie lange musst du das Gelernte parat haben? Das bestimmt, in welchem Abstand der Tutor Wiederholungen vorschlägt."
               value={retention}
               options={RETENTION_OPTIONS}
               onChange={setRetention}
@@ -238,6 +275,31 @@ export function OnboardingForm({ onComplete, theme, onToggleTheme }: Props) {
               options={STYLE_OPTIONS}
               onChange={setStyle}
             />
+            <div className="onboarding-field">
+              <div>
+                <div className="field-label">Lerntyp nach Vester</div>
+                <div className="field-description">
+                  Vorliebe, keine Lerneinstellung: Frederic Vester unterscheidet, über welchen Zugang
+                  man Neues am liebsten aufnimmt. Das Modell ist verbreitet, ein Nutzen für den
+                  Lernerfolg ist aber nicht belegt — die Angabe ändert nur die Darbietung.
+                </div>
+              </div>
+              <div className="option-group" role="radiogroup" aria-label="Lerntyp nach Vester">
+                {LEARNER_TYPE_OPTIONS.map((opt) => (
+                  <label key={opt.value} className="option-check">
+                    <input
+                      type="radio"
+                      name="learner-type"
+                      checked={learnerType === opt.value}
+                      onChange={() => setLearnerType(opt.value)}
+                    />
+                    <span>
+                      <strong>{opt.label}</strong> — {opt.vester}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
           </div>
 
           {error && <p className="error-banner">{error}</p>}

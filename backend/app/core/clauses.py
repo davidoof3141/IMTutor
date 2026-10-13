@@ -10,7 +10,7 @@ import yaml
 from pydantic import BaseModel, ConfigDict
 
 from app.core.constants import PARAMETER_NAMES
-from app.core.profile import PresentationStyle
+from app.core.profile import LearnerType, PresentationStyle
 from app.core.vector import ADMISSIBLE_VALUES
 
 
@@ -48,6 +48,9 @@ def _check_totality(catalogue: ClauseCatalogue) -> None:
     for style in get_args(PresentationStyle):
         if style not in style_entries:
             missing.append(f"presentation_style={style!r}")
+    for learner_type in get_args(LearnerType):
+        if learner_type != "none" and learner_type not in catalogue.preferences.get("learner_type", {}):
+            missing.append(f"learner_type={learner_type!r}")
     if True not in catalogue.preferences.get("simplified_language", {}):
         missing.append("simplified_language=True")
     if missing:

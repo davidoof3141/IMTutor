@@ -26,8 +26,8 @@ class ProfileRepository:
                 INSERT INTO profiles
                     (learner_id, user_id, prior_knowledge_seed, learning_goal,
                      retention_horizon, industry, simplified_language,
-                     presentation_style, ruleset_version, created_at)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                     presentation_style, learner_type, ruleset_version, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
                     profile.learner_id,
@@ -38,6 +38,7 @@ class ProfileRepository:
                     profile.industry,
                     profile.simplified_language,
                     profile.presentation_style,
+                    profile.learner_type,
                     profile.ruleset_version,
                     profile.created_at.isoformat(),
                 ),
@@ -62,6 +63,8 @@ class ProfileRepository:
             industry=row["industry"],
             simplified_language=row["simplified_language"],
             presentation_style=row["presentation_style"],
+            # NULL on legacy rows whose column predates this field
+            learner_type=row["learner_type"] or "none",
             ruleset_version=row["ruleset_version"],
             created_at=row["created_at"],
         )

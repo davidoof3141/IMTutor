@@ -27,6 +27,10 @@ Industry = Literal[
 # Preferences: NOT mapping inputs. They only select fixed clauses at prompt
 # assembly (core/assembler.py) and are invisible to derive().
 PresentationStyle = Literal["concise", "balanced", "verbose"]
+# Lerntyp nach Vester: how the learner prefers to take in new material. A
+# preference, not a mapping input -- it only selects a fixed prompt clause.
+# "none" = no statement, adds nothing to the prompt.
+LearnerType = Literal["none", "visuell", "auditiv", "kommunikativ", "motorisch"]
 
 # The names a rule's `when` block may reference. Deliberately excludes the
 # preferences, so a rule can never be conditioned on them.
@@ -58,6 +62,7 @@ class Profile(BaseModel):
     # --- preferences (prompt assembly only) ---
     simplified_language: bool
     presentation_style: PresentationStyle
+    learner_type: LearnerType
     ruleset_version: str
     created_at: datetime
 
@@ -66,6 +71,7 @@ class Profile(BaseModel):
         return Preferences(
             simplified_language=self.simplified_language,
             presentation_style=self.presentation_style,
+            learner_type=self.learner_type,
         )
 
 
@@ -76,3 +82,4 @@ class Preferences(BaseModel):
 
     simplified_language: bool
     presentation_style: PresentationStyle
+    learner_type: LearnerType

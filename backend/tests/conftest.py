@@ -11,6 +11,7 @@ from app.core.clauses import ClauseCatalogue, load_catalogue
 from app.core.planner import PlannerTable, load_planner_table
 from app.core.profile import (
     Industry,
+    LearnerType,
     LearningGoal,
     PresentationStyle,
     PriorKnowledge,
@@ -210,6 +211,7 @@ def make_profile(
     industry: Industry = "neutral",
     simplified_language: bool = False,
     presentation_style: PresentationStyle = "balanced",
+    learner_type: LearnerType = "none",
     learner_id: str = "test-learner",
 ) -> Profile:
     return Profile(
@@ -220,6 +222,7 @@ def make_profile(
         industry=industry,
         simplified_language=simplified_language,
         presentation_style=presentation_style,
+        learner_type=learner_type,
         ruleset_version="v1",
         created_at=datetime(2026, 1, 1, tzinfo=UTC),
     )

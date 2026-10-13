@@ -64,3 +64,9 @@ preferences:
     concise: "Fasse dich kurz: antworte knapp und beschränke dich auf den Kern der Frage."
     balanced: "Antworte in mittlerer Länge: so ausführlich wie nötig, so knapp wie möglich."
     verbose: "Antworte ausführlich und gründlich, mit allen relevanten Details und Zusammenhängen."
+  # Lerntyp nach Vester; "none" adds no clause.
+  learner_type:
+    visuell: "Veranschauliche Inhalte möglichst bildhaft: nutze Gliederungen, Tabellen, Schemata in Textform und räumliche Metaphern."
+    auditiv: "Erkläre im Ton eines Vortrags: nutze Merksätze, sprechende Analogien und fasse das Wichtigste am Ende mündlich klingend zusammen."
+    kommunikativ: "Arbeite im Dialog: stelle Rückfragen, lass die lernende Person Inhalte in eigenen Worten wiedergeben und lade zum Diskutieren ein."
+    motorisch: "Setze auf Handlung: gib kleine Aufgaben zum Selbermachen, lass Schritte oder Berechnungen selbst durchspielen und Szenarien ausprobieren."

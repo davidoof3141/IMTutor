@@ -28,4 +28,6 @@ def assemble(
         if preferences.simplified_language:
             lines.append(catalogue.preferences["simplified_language"][True])
         lines.append(catalogue.preferences["presentation_style"][preferences.presentation_style])
+        if preferences.learner_type != "none":
+            lines.append(catalogue.preferences["learner_type"][preferences.learner_type])
     return "\n".join(lines)
