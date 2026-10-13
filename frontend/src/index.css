@@ -2783,9 +2783,15 @@ a:hover {
 
 /* Per-chapter diagnostic (quiz + summary) */
 .diagnostic {
+  /* Lives inside .chat-main (overflow: hidden, flex column), so it has to
+     scroll itself when the quiz or summary is taller than the viewport. */
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
   max-width: 44rem;
   margin: 0 auto;
   padding: 1.5rem 1rem 3rem;
+  overflow-y: auto;
 }
 .diagnostic-item {
   border: 1px solid var(--border, rgba(127, 127, 127, 0.3));
