@@ -1,0 +1,48 @@
+chapter_id: '1'
+course_id: informationsmanagement
+source_hash: 80f3c33ef7e0d4d8a351da7c0d0e36aae1397a3be96a06b5be082a0a31dc55e5
+generator_model: claude-sonnet-5-5 (written by Claude Code from the chapter text; human review pending)
+generated_at: '2026-10-13T14:52:02+00:00'
+items:
+- id: q1
+  level: recognition
+  stem: Welches Beispiel nennt das Kapitel für Wettbewerbsvorteile durch ein strategisches Informationssystem
+    (SIS)?
+  options:
+  - text: Das Reservierungssystem von American Airlines
+    correct: true
+  - text: Die Hohenheimer Umfrage zum IV-Controlling
+  - text: Der Aufsatz „IT doesn’t matter“ von Carr
+  - text: I don't know
+- id: q2
+  level: classification
+  stem: Ein Konzern erwartet von neuer IKT große Produktivitätssprünge, die gemessene Wirkung bleibt weit
+    dahinter zurück. Welchem Thema des Kapitels ist das zuzuordnen?
+  options:
+  - text: Dem Produktivitätsparadoxon
+    correct: true
+  - text: Dem strategischen Informationssystem (SIS)
+  - text: Dem Business Process Reengineering (BPR)
+  - text: I don't know
+- id: q3
+  level: first_step
+  stem: Eine Abteilung klagt über Informationsflut und zugleich fehlende Informationen. Was ist der erste
+    Schritt, um Informationsangebot und -bedarf ins Gleichgewicht zu bringen?
+  options:
+  - text: Die Informationslogistik auf neue Technik umstellen
+  - text: Zusätzliche Informationsquellen erschließen, um das Angebot zu erweitern
+  - text: Den Informationsbedarf ermitteln, auch den zunächst impliziten und nicht nur die geäußerte Nachfrage
+    correct: true
+  - text: I don't know
+- id: q4
+  level: transfer
+  stem: 'Ein Stadtwerk argumentiert: Die eingesetzte IKT sei Standard und überall verfügbar, also solle
+    man nur die Kosten drücken. Wie bewertet das Kapitel diese Haltung?'
+  options:
+  - text: Sie ist richtig, da IKT wie elektrische Energie eine Commodity ist und nur noch Kostenfragen
+      bleiben
+  - text: Sie ist richtig, solange das Stadtwerk zusätzlich ein Reservierungssystem als SIS einführt
+  - text: 'Sie greift zu kurz: Wert entsteht nicht durch die Technik selbst, sondern durch ihre richtige
+      Anwendung, also durch das Informationsmanagement'
+    correct: true
+  - text: I don't know

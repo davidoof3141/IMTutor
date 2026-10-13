@@ -5,6 +5,14 @@ from app.llm.client import TutorResponse
 from tests.conftest import make_learner
 
 
+@pytest.fixture(autouse=True)
+def _no_diagnostic_gate(monkeypatch: pytest.MonkeyPatch) -> None:
+    """These tests exercise lesson mechanics in chapter 1, which now ships a
+    diagnostic; the gate itself is covered in test_diagnostic.py."""
+    monkeypatch.setattr("app.api.lesson.require_diagnostic_done", lambda *a, **k: None)
+    monkeypatch.setattr("app.api.chat.require_diagnostic_done", lambda *a, **k: None)
+
+
 def _onboard(client: TestClient, **overrides: str) -> dict:
     body = {
         "prior_knowledge_seed": "low",

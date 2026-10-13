@@ -1,0 +1,46 @@
+chapter_id: '6'
+course_id: informationsmanagement
+source_hash: 13242dd9548451b9e2a5e91c40ce1254aca4e17368db6322ca82f0235250caa2
+generator_model: claude-sonnet-5-5 (written by Claude Code from the chapter text; human review pending)
+generated_at: '2026-10-13T14:55:22+00:00'
+items:
+- id: q1
+  level: recognition
+  stem: Wie definiert das Kapitel Informationssysteme?
+  options:
+  - text: Als reine Software-Anwendungssysteme ohne menschliche Komponente
+  - text: Als die Gesamtheit der Hardware eines Unternehmens
+  - text: Als soziotechnische („Mensch-Maschinen-“)Systeme mit menschlichen und maschinellen Komponenten
+    correct: true
+  - text: I don't know
+- id: q2
+  level: classification
+  stem: Die Anwendungen eines Unternehmens sind unüberschaubar geworden; es soll bestimmt werden, welche
+    überarbeitet werden müssen. Welchem Aufgabenfeld des IS-Managements gehört das an?
+  options:
+  - text: Dem Lebenszyklus einer einzelnen Anwendung
+  - text: Dem Management der Daten
+  - text: Dem Management der Systemlandschaft, etwa mit einem IS-Portfolio
+    correct: true
+  - text: I don't know
+- id: q3
+  level: first_step
+  stem: Das Geschäftsumfeld eines Unternehmens ändert sich. Was ist laut Prozess des IS-Managements der
+    erste Schritt?
+  options:
+  - text: Die relevanten Unternehmensprozesse und -daten analysieren
+    correct: true
+  - text: Sofort ein IS-Projekt zur Realisierung freigeben
+  - text: Eine Standardsoftware auswählen und lizenzieren
+  - text: I don't know
+- id: q4
+  level: transfer
+  stem: Ein Händler sammelt riesige Kundendatenbestände, doch die Qualität seiner Entscheidungen bleibt
+    gleich. Welche Erklärung gibt das Kapitel?
+  options:
+  - text: Daten sind per se nicht wertschöpfend; Wert entsteht erst, wenn sie interpretiert und in Entscheidungen
+      und Handlungen umgesetzt werden
+    correct: true
+  - text: Daten sind bereits Information und wertschöpfend, das Problem liegt allein in der Hardware
+  - text: Es sind noch zu wenig Daten vorhanden, denn mehr Datenvolumen führt unmittelbar zu Wertschöpfung
+  - text: I don't know

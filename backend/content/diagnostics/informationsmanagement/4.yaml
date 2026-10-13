@@ -1,48 +1,46 @@
 chapter_id: '4'
 course_id: informationsmanagement
 source_hash: f58133df175ceff70e072b85e67d2debd53b93cd27471f6f610301d5f5ffb8a9
-generator_model: google/gemini-3.1-pro-preview
-generated_at: '2026-10-13T14:43:45+00:00'
+generator_model: claude-sonnet-5-5 (written by Claude Code from the chapter text; human review pending)
+generated_at: '2026-10-13T14:53:03+00:00'
 items:
 - id: q1
   level: recognition
-  stem: Welcher dieser Begriffe bezeichnet eine der drei Hauptebenen im zusammenfassenden Referenzmodell
-    des Informationsmanagements dieses Kapitels?
+  stem: Welche drei Elemente bilden den Managementregelkreis von Eccles und Nohria (1992), den das Kapitel
+    aufgreift?
   options:
-  - text: Management der Geschäftsprozesse
-  - text: Management der Informationswirtschaft
+  - text: Planung, Steuerung und Kontrolle
+  - text: Rhetorik, Aktion und Identität
     correct: true
-  - text: Management der Organisationsentwicklung
+  - text: Konzept, Implementierung und Infrastruktur
   - text: I don't know
 - id: q2
   level: classification
-  stem: Ein Unternehmen strukturiert sein Informationsmanagement anhand von detaillierten Ablaufdarstellungen
-    und definiert genaue Sollabläufe für die zuständigen Abteilungen. Zu welcher Klasse von Ansätzen gehört
-    dieses Vorgehen?
+  stem: Ein Projekt wird mit dem Leitsatz „Mitarbeiter sollen bessere Informationen haben“ gestartet.
+    Wie ordnet das Kapitel diese Rhetorik ein?
   options:
-  - text: Architekturmodelle
-  - text: Prozessorientierte Ansätze
+  - text: Als Teil der IKT-Infrastruktur
+  - text: Als nutzungsorientiert
     correct: true
-  - text: Aufgabenorientierte Ansätze
+  - text: Als technikorientiert
   - text: I don't know
 - id: q3
   level: first_step
-  stem: Ein Unternehmen möchte nach dem EWIM-Ansatz die Geschäfts- und IT-Bereiche durch Planungsprozesse
-    verbinden. Was ist der erste Schritt in diesem Modell?
+  stem: Ein CIO will im Unternehmen Wandel anstoßen. Womit beginnt nach Eccles und Nohria die Kette, die
+    bis zur veränderten Identität führt?
   options:
-  - text: Einflussnahme der Informationstechnologie auf die Unternehmensstrategie
-  - text: Ableitung der Geschäftsplanung aus der strategischen Planung
+  - text: Mit einer Anweisung, die Unternehmensidentität unmittelbar zu ändern
+  - text: Mit einer verständlichen, wirkungsvollen Rhetorik, die Menschen zu Aktionen bewegt
     correct: true
-  - text: Anpassung der Informationssystemarchitektur an die Geschäftsziele
+  - text: Mit einer neuen IKT-Infrastruktur, aus der sich die Identität von selbst ergibt
   - text: I don't know
 - id: q4
   level: transfer
-  stem: Ein Krankenhaus führt ein neues KI-Diagnosesystem ein. Die IT-Abteilung fokussiert sich komplett
-    auf Serverkapazitäten und Softwareinstallation. Die Ärzte beschweren sich, da unklar bleibt, welches
-    medizinische Problem das System lösen soll. Welches Vorgehen fordert das Informationsmanagement hier?
+  stem: 'In einem Krankenhaus konzentriert sich die IT auf Technik; die Ärzte fragen: „Welches Problem
+    soll man damit lösen?“ Was folgt daraus nach dem Kapitel für das Informationsmanagement?'
   options:
-  - text: Integration von nutzungsorientierten und technikorientierten Konzepten
+  - text: Konzepte sollten nutzungs- und technikorientierte Inhalte verbinden; das IM übernimmt eine Integrationsfunktion
     correct: true
-  - text: Beschleunigung der technikorientierten IS-Implementierung
-  - text: Ausschließliche Konzentration auf eine nutzungsorientierte Rhetorik
+  - text: Das IM sollte rein nutzungsorientiert vorgehen und neue Technik zunächst ablehnen
+  - text: Die Technikorientierung sollte weiter verstärkt werden, bis die Ärzte das neue System annehmen
   - text: I don't know

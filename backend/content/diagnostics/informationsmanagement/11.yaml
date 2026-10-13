@@ -1,0 +1,44 @@
+chapter_id: '11'
+course_id: informationsmanagement
+source_hash: a6e299fc14d49972687b7351456c540c72d002e9acec186e444d171f92cb01d0
+generator_model: claude-sonnet-5-5 (written by Claude Code from the chapter text; human review pending)
+generated_at: '2026-10-13T14:55:06+00:00'
+items:
+- id: q1
+  level: recognition
+  stem: Welcher Branche gehört die Rockhaus AG in der Fallstudie an?
+  options:
+  - text: Der Energieversorgung
+  - text: Dem Maschinenbau
+  - text: Dem Versandhandel
+    correct: true
+  - text: I don't know
+- id: q2
+  level: classification
+  stem: Die Rockhaus AG soll ihre Prozesse als ereignisgesteuerte Prozessketten (EPK) modellieren. Welchem
+    Buchkapitel ordnet Tab. 11.1 diese Frage zu?
+  options:
+  - text: Kapitel 3.3 (Prozessmodellierung)
+    correct: true
+  - text: Kapitel 8.6 (Personalmanagement)
+  - text: Kapitel 7 (Management der IKT)
+  - text: I don't know
+- id: q3
+  level: first_step
+  stem: Eine Lernende beginnt mit der Fallstudie. Wie sollte sie die Fragenblöcke laut Kapitel bearbeiten?
+  options:
+  - text: In beliebiger Reihenfolge, ohne auf die Buchkapitel zurückzugreifen
+  - text: Der Reihe nach und mit Hilfe der in Tab. 11.1 genannten Buchkapitel
+    correct: true
+  - text: Nur die Fragen ihrer Lieblingsebene, da die Ebenen vollständig getrennt sind
+  - text: I don't know
+- id: q4
+  level: transfer
+  stem: Ein Versandhändler will den Standort eines neuen Lagers anhand mehrerer gewichteter Kriterien
+    wählen. Welche Methode ordnet Tab. 11.1 dieser Entscheidung zu?
+  options:
+  - text: Das Business Model Canvas
+  - text: Die SMART-Methode (Simple Multi Attribute Rating Technique)
+    correct: true
+  - text: Die Balanced Scorecard
+  - text: I don't know

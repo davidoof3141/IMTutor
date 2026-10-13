@@ -31,7 +31,7 @@ scores 0. A fixed lookup table `(correct_count, seed) -> level` gives a
 chapter-level prior knowledge that **replaces the seed for that chapter's
 mapping call only**; the seed itself is never updated. A summary screen shows
 the result and the chapter's vector with per-field override. The diagnostics
-are generated offline (`make diagnostics` in `backend/`), reviewed by a human
+are drafted offline (`make diagnostics` in `backend/`, or written directly from the chapter text), reviewed by a human
 and committed as static YAML under `backend/content/diagnostics/`, next to the
 shared `scoring_table.yaml`; the server only loads them, and refuses to start
 on an invalid file. A chapter without a file has no diagnostic and uses the seed.

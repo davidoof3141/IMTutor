@@ -1,0 +1,47 @@
+chapter_id: '10'
+course_id: informationsmanagement
+source_hash: ed48d6c62b37857de7a1a5ff7037207ecd669da4c70e76921264e8a6cd25fd09
+generator_model: claude-sonnet-5-5 (written by Claude Code from the chapter text; human review pending)
+generated_at: '2026-10-13T14:54:45+00:00'
+items:
+- id: q1
+  level: recognition
+  stem: Welche Aktivität zählt in Porters Wertschöpfungskette zu den primären Aktivitäten?
+  options:
+  - text: Human Resource Management
+  - text: Produktion
+    correct: true
+  - text: Technologie-Entwicklung
+  - text: I don't know
+- id: q2
+  level: classification
+  stem: Ein Unternehmen setzt viele kleine, vernetzte Endgeräte ein, die Mitarbeitende im Alltag unsichtbar
+    unterstützen. Welchem Themenfeld des Kapitels gehört das an?
+  options:
+  - text: Dem Real-Time Enterprise
+  - text: Dem Ubiquitous Computing
+    correct: true
+  - text: Dem Wissensmanagement
+  - text: I don't know
+- id: q3
+  level: first_step
+  stem: Ein Unternehmen will seine Zusammenarbeit mit Lieferanten und Kunden systematisch analysieren.
+    Womit beginnt die Betrachtung nach Porter?
+  options:
+  - text: Mit der eigenen Wertschöpfungskette aus primären und unterstützenden Aktivitäten, die danach
+      in Lieferanten und Kunden eingeordnet wird
+    correct: true
+  - text: Mit der Auswahl einer Cloud-Plattform für alle Partner
+  - text: Mit dem Aufbau eines Wertschöpfungsnetzwerks aller Partner
+  - text: I don't know
+- id: q4
+  level: transfer
+  stem: Ein Möbelhersteller und seine Zulieferer wollen Bestell- und Lieferdaten automatisch austauschen.
+    Welchen Beitrag leistet das Informationsmanagement nach dem Kapitel?
+  options:
+  - text: Es übernimmt die Produktion der Zulieferer
+  - text: Es unterstützt den Zusammenschluss der Informationssysteme im Wertschöpfungsnetzwerk und damit
+      die Übertragung von Daten und Informationen
+    correct: true
+  - text: Es beschränkt sich auf die internen Systeme einer einzelnen Firma
+  - text: I don't know

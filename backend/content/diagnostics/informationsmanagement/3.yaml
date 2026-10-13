@@ -1,0 +1,47 @@
+chapter_id: '3'
+course_id: informationsmanagement
+source_hash: 772cf04278ee433652face9cb6d3c3d909a6176ee0ce81aad5f7c86471e90276
+generator_model: claude-sonnet-5-5 (written by Claude Code from the chapter text; human review pending)
+generated_at: '2026-10-13T14:52:46+00:00'
+items:
+- id: q1
+  level: recognition
+  stem: Wie wird ein Ereignis in einer ereignisgesteuerten Prozesskette (EPK) grafisch dargestellt?
+  options:
+  - text: Als Rechteck mit abgerundeten Ecken
+  - text: Als Sechseck
+    correct: true
+  - text: Als gestrichelte Linie
+  - text: I don't know
+- id: q2
+  level: classification
+  stem: Ein erstelltes Modell löst in der Organisation Diskussionen aus, die wiederum den modellierten
+    Gegenstand verändern. Welcher Modellbegriff des Kapitels beschreibt diese wechselseitige Beeinflussung?
+  options:
+  - text: Der systemische Modellbegriff
+    correct: true
+  - text: Der Begriff des Referenzmodells
+  - text: Der allgemeine Modellbegriff nach Stachowiak
+  - text: I don't know
+- id: q3
+  level: first_step
+  stem: Ein Team will den Wareneingang als ereignisgesteuerte Prozesskette (EPK) modellieren. Was ist
+    der erste Schritt?
+  options:
+  - text: Das Startereignis festlegen, das die erste Funktion auslöst
+    correct: true
+  - text: Die Verknüpfungsoperatoren für alle Verzweigungen festlegen
+  - text: Alle organisatorischen Einheiten und Datenobjekte einzeichnen
+  - text: I don't know
+- id: q4
+  level: transfer
+  stem: Zwei Abteilungen modellieren denselben Bestellprozess zu verschiedenen Zwecken und erhalten unterschiedliche
+    Modelle. Wie erklärt das Kapitel diese Abweichung?
+  options:
+  - text: Mindestens eine Abteilung hat falsch modelliert, denn ein Modell bildet das Original vollständig
+      ab
+  - text: 'Ein Modell ist stets „Modell-wovon-wozu-für wen“: Auswahl und Abbildungsregeln sind auf Erzeuger,
+      Zweck und Perspektive zugeschnitten'
+    correct: true
+  - text: Die Abweichung entsteht allein durch die gewählte Modellierungssoftware
+  - text: I don't know

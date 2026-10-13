@@ -170,8 +170,10 @@ granularity:
    only. It is stored in `chapter_diagnostics`, never in the profile: the seed
    is not updated, and another chapter's mapping is unaffected.
 
-The diagnostics are **generated offline, reviewed by a human, and committed**
-as static YAML -- the server only reads them:
+The diagnostics are **drafted offline, reviewed by a human, and committed**
+as static YAML -- the server only reads them. They can be drafted by the
+generator script (an LLM via OpenRouter) or written directly from the chapter
+text (`generator_model` records which):
 
 ```
 backend/content/diagnostics/scoring_table.yaml                 shared by all chapters
@@ -201,7 +203,9 @@ the file. A chapter whose current content hash differs from `source_hash` is
 **stale**: a startup warning and `GET /api/admin/diagnostics-stale` (admin
 only) report it, but its diagnostic is still served -- regenerating is a
 maintenance action (`make diagnostics-force CHAPTER=<id>`, `make diagnostics-stale`).
-Generated items are drafts: review and edit them before committing. Scoring
+The shipped files for chapters 1-11 were written by Claude Code from the
+chapters' text; for the longer chapters (5-10) from their opening sections and
+key passages, not every page. They are drafts: review and edit them. Scoring
 is a lookup -- no model inference.
 
 Flow: `GET /api/diagnostic/{learner_id}` (keyed by the learner's current

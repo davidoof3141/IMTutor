@@ -1,0 +1,47 @@
+chapter_id: '7'
+course_id: informationsmanagement
+source_hash: 82f66aaf8a197b4a63da538ef6982e4dbd647f24f76f5429633fb7905a1965ab
+generator_model: claude-sonnet-5-5 (written by Claude Code from the chapter text; human review pending)
+generated_at: '2026-10-13T14:53:55+00:00'
+items:
+- id: q1
+  level: recognition
+  stem: Welches Ziel nennt das Kapitel für das Management der Informations- und Kommunikationstechnik
+    (IKT)?
+  options:
+  - text: Hardware möglichst günstig einzukaufen
+  - text: Durch effektiven und effizienten IKT-Einsatz zur Steigerung des Unternehmenswertes beizutragen
+    correct: true
+  - text: Jede neue Technik sofort im Unternehmen einzuführen
+  - text: I don't know
+- id: q2
+  level: classification
+  stem: Ein Unternehmen nutzt bewährte, am Markt etablierte Technik, um erstmals ein neues Tätigkeitsfeld
+    zu erschließen. Welchem Quadranten der Technikprodukte nach Phillips entspricht das?
+  options:
+  - text: 'Quadrant I: etablierte Technik, mehr Effizienz bestehender Tätigkeiten'
+  - text: 'Quadrant IV: neue Technik, neue Tätigkeitsfelder'
+  - text: 'Quadrant II: etablierte Technik, neue Tätigkeitsfelder'
+    correct: true
+  - text: I don't know
+- id: q3
+  level: first_step
+  stem: Ein Unternehmen hat ein IKT-Problem und denkt an Leading-Edge-Technik. Was ist laut Kapitel zuerst
+    zu prüfen?
+  options:
+  - text: Welche Hardware die niedrigsten Anschaffungskosten hat
+  - text: Ob sich das Problem mit bereits etablierter Technik lösen lässt
+    correct: true
+  - text: Welche neueste Technik der Markt gerade bietet
+  - text: I don't know
+- id: q4
+  level: transfer
+  stem: Ein Unternehmen erwägt eine überlegene Technik eines Anbieters mit schwacher Marktposition. Wie
+    sollte es laut Kapitel entscheiden?
+  options:
+  - text: Die Technik ablehnen, weil nur etablierte Anbieter infrage kommen
+  - text: Technik, Markt und eigene Fähigkeiten gemeinsam abwägen, auch das Risiko fehlenden Supports
+      und die Annahmebereitschaft im Unternehmen
+    correct: true
+  - text: Die Technik einführen, weil die überlegene Technik immer Vorrang hat
+  - text: I don't know

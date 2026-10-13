@@ -204,7 +204,9 @@ def test_file_name_must_match_chapter_id(tmp_path: Path) -> None:
 def test_shipped_files_are_valid() -> None:
     assert load_scoring_table(SCORING_PATH)
     shipped = load_diagnostics(DIAGNOSTICS_DIR)
-    assert "4" in shipped  # the worked example
+    assert sorted(shipped, key=int) == [str(n) for n in range(1, 12)]  # every chapter of the book
+    for diagnostic in shipped.values():
+        assert len(diagnostic.source_hash) == 64
 
 
 def test_stale_chapters_compares_hashes(diagnostic: Diagnostic) -> None:

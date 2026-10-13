@@ -1,0 +1,46 @@
+chapter_id: '9'
+course_id: informationsmanagement
+source_hash: ceadfeb33aba0448d46e17e378e27b26d62a29d2361c81b9336358e367a9785b
+generator_model: claude-sonnet-5-5 (written by Claude Code from the chapter text; human review pending)
+generated_at: '2026-10-13T14:54:29+00:00'
+items:
+- id: q1
+  level: recognition
+  stem: Welches Referenzmodell nennt das Kapitel als De-facto-Standard für serviceorientiertes IT-Management?
+  options:
+  - text: ITIL
+    correct: true
+  - text: eTOM
+  - text: Das MNM Service Model
+  - text: I don't know
+- id: q2
+  level: classification
+  stem: Ein Team testet einen neuen IT-Service und nimmt ihn in Betrieb. Welcher Phase des ITIL-V3-Servicelebenszyklus
+    ist das zuzuordnen?
+  options:
+  - text: Service Operation
+  - text: Service Design
+  - text: Service Transition
+    correct: true
+  - text: I don't know
+- id: q3
+  level: first_step
+  stem: Die Anforderungen eines Kunden an einen IT-Service ändern sich. Welche Phase des ITIL-V3-Lebenszyklus
+    kommt zuerst?
+  options:
+  - text: 'Service Operation: den Service erbringen'
+  - text: 'Continual Service Improvement: den Service verbessern'
+  - text: 'Service Strategy: die Geschäftsanforderungen analysieren und identifizieren'
+    correct: true
+  - text: I don't know
+- id: q4
+  level: transfer
+  stem: Ein Telekommunikationsanbieter möchte seine Prozesse ganzheitlich und über Unternehmensgrenzen
+    hinweg strukturieren. Was sagt das Kapitel zu eTOM?
+  options:
+  - text: eTOM liefert konkrete Qualitätsziele und Handlungsempfehlungen für jeden einzelnen Prozess
+  - text: eTOM bietet eine ganzheitliche, integrative Sicht, gibt aber keine Handlungsempfehlungen und
+      keine Ziele zur Bewertung der Prozessqualität
+    correct: true
+  - text: eTOM beschränkt sich auf isolierte Einzelprozesse ohne Verbindung zu anderen Unternehmen
+  - text: I don't know

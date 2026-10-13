@@ -1,0 +1,46 @@
+chapter_id: '5'
+course_id: informationsmanagement
+source_hash: 7aaa874b2edf92cd0b4825cbbe3baa59ec70b6bbe7744bb054d2a04126029e57
+generator_model: claude-sonnet-5-5 (written by Claude Code from the chapter text; human review pending)
+generated_at: '2026-10-13T14:53:23+00:00'
+items:
+- id: q1
+  level: recognition
+  stem: Welches übergeordnete Ziel nennt das Kapitel für die Informationswirtschaft?
+  options:
+  - text: Die größtmögliche Informationsmenge zu speichern
+  - text: Die Kosten der IKT-Infrastruktur zu minimieren
+  - text: Das informationswirtschaftliche Gleichgewicht im Unternehmen herzustellen
+    correct: true
+  - text: I don't know
+- id: q2
+  level: classification
+  stem: Ein Unternehmen will, dass die richtige Information in der richtigen Menge zum richtigen Zeitpunkt
+    am richtigen Ort beim Empfänger verfügbar ist. Welches Konzept des Kapitels beschreibt das?
+  options:
+  - text: Die Informationslogistik
+    correct: true
+  - text: Die Informationsflut
+  - text: Das Management der Informationsverwendung
+  - text: I don't know
+- id: q3
+  level: first_step
+  stem: Eine Abteilung will neue Informationsquellen erschließen. Was ist laut Lebenszyklusmodell der
+    Informationswirtschaft der eigentliche Auslöser, mit dem der Zyklus beginnt?
+  options:
+  - text: Geeignete Informationsquellen auswählen
+  - text: Informationsnachfrage und Informationsbedarf klären
+    correct: true
+  - text: Das Informationsangebot gestalten
+  - text: I don't know
+- id: q4
+  level: transfer
+  stem: Ein Vertriebsleiter geht in Berichten und E-Mails unter. Die IT schlägt ein weiteres Berichtsportal
+    vor. Welche Richtung legt das Kapitel nahe?
+  options:
+  - text: Das Informationsangebot erweitern, denn mehr Information führt stets zu besseren Entscheidungen
+  - text: Weitere Kommunikationskanäle öffnen, damit alle Beteiligten ständig informiert sind
+  - text: Informationen reduzieren und ihre Bereitstellung gestalten, da die menschliche Verarbeitungskapazität
+      begrenzt bleibt
+    correct: true
+  - text: I don't know

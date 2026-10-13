@@ -1,0 +1,47 @@
+chapter_id: '2'
+course_id: informationsmanagement
+source_hash: 75269fb8deb0f407d0327d6fdefa9889736f9596ca56e7fadf65cb5e69096739
+generator_model: claude-sonnet-5-5 (written by Claude Code from the chapter text; human review pending)
+generated_at: '2026-10-13T14:55:22+00:00'
+items:
+- id: q1
+  level: recognition
+  stem: 'Im Währungsbeispiel des Kapitels (Zeichen, Daten, Information, Wissen): Was gehört zur Ebene
+    „Information“?'
+  options:
+  - text: Der Devisenkurs 0,87 € = 1 US$, also der Wert 0,87 samt seinem Kontext
+    correct: true
+  - text: Die Mechanismen des Währungsmarktes
+  - text: Die einzelnen Zeichen „0“, „8“, „7“ und „,“
+  - text: I don't know
+- id: q2
+  level: classification
+  stem: Ein Sender verfolgt mit einer Mitteilung eine bestimmte Absicht beim Empfänger. Welche Dimension
+    der Semiotik betrachtet genau diese Beziehung zwischen Zeichen und Verwender?
+  options:
+  - text: Die Sigmatik
+  - text: Die Pragmatik
+    correct: true
+  - text: Die Syntaktik
+  - text: I don't know
+- id: q3
+  level: first_step
+  stem: Ein Controller erhält die bloße Zahl 0,87. Was ist der erste Schritt, damit daraus Information
+    wird?
+  options:
+  - text: Die Zahl mit weiteren Daten vernetzen, bis Wissen entsteht
+  - text: Den Kontext ergänzen, etwa dass es der Devisenkurs von Euro je US-Dollar ist
+    correct: true
+  - text: Die Zahl mit mehr Nachkommastellen genauer erfassen
+  - text: I don't know
+- id: q4
+  level: transfer
+  stem: Ein Verlag verkauft dieselbe Marktstudie als Datei an zehn Kunden. Wie unterscheidet sich Information
+    dabei laut Kapitel von einem materiellen Wirtschaftsgut?
+  options:
+  - text: Die Grenzkosten der Vervielfältigung liegen nahe Null, und die Information verliert durch Gebrauch
+      und Teilung nicht an Wert
+    correct: true
+  - text: Jede weitere Kopie verursacht hohe Vervielfältigungskosten, und der Wert sinkt durch Weitergabe
+  - text: Ihr Preis am Markt lässt sich einfach und eindeutig ermitteln
+  - text: I don't know

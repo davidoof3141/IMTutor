@@ -1,0 +1,47 @@
+chapter_id: '8'
+course_id: informationsmanagement
+source_hash: 41a9930fbb85c688aab14256d94a043736d5a8d1546fc9fdcda5b71cc82b7c15
+generator_model: claude-sonnet-5-5 (written by Claude Code from the chapter text; human review pending)
+generated_at: '2026-10-13T14:55:22+00:00'
+items:
+- id: q1
+  level: recognition
+  stem: Welche drei Grundsatzentscheidungen identifiziert das Kapitel auf der Ebene der Führungsaufgaben
+    des Informationsmanagements?
+  options:
+  - text: Eigenentwicklung, Fremdbezug und Open Source
+  - text: Planung, Organisation und Kontrolle der Information
+  - text: Welche Leistung soll erbracht werden, von wem, und wird sie richtig erbracht?
+    correct: true
+  - text: I don't know
+- id: q2
+  level: classification
+  stem: Ein Unternehmen entscheidet, ob IT-Leistungen intern oder von einem externen Dienstleister erbracht
+    werden (Sourcing und Shoring). Welcher Grundsatzentscheidung des Kapitels gehört das an?
+  options:
+  - text: „Wird die Leistung richtig erbracht?“
+  - text: „Welche Leistung soll erbracht werden?“
+  - text: „Von wem wird die Leistung erbracht?“
+    correct: true
+  - text: I don't know
+- id: q3
+  level: first_step
+  stem: Ein Unternehmen plant sein IT-Leistungsangebot neu. Mit welcher Entscheidung beginnt es laut Kapitel?
+  options:
+  - text: Zuerst Kennzahlen für das IT-Controlling festlegen
+  - text: Festlegen, welche (IT-)Leistung überhaupt erbracht werden soll, und die IT-Strategie mit der
+      Unternehmensstrategie abstimmen
+    correct: true
+  - text: Zuerst das IT-Sourcing wählen, um Kosten zu senken
+  - text: I don't know
+- id: q4
+  level: transfer
+  stem: Ein Maschinenbauer kann dank vernetzter Sensoren erstmals Wartung als Dienstleistung anbieten;
+    diese Strategieoption entsteht erst durch den Einsatz von Informationssystemen. Wie ordnet das Kapitel
+    die Rolle der IS ein?
+  options:
+  - text: Als Kontrollfunktion der Leistungserbringung
+  - text: 'Als Unterstützungsfunktion (align): IS richten sich an einer bestehenden Strategie aus'
+  - text: 'Als Gestaltungsfunktion (enable): IS ermöglichen die strategische Option erst'
+    correct: true
+  - text: I don't know
