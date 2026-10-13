@@ -92,6 +92,10 @@ ALTER TABLE profiles ADD COLUMN IF NOT EXISTS learning_goal TEXT;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS retention_horizon TEXT NOT NULL DEFAULT '1_to_3_months';
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS simplified_language BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS presentation_style TEXT NOT NULL DEFAULT 'balanced';
+-- learner_type returned as a prompt-only preference. Legacy tables already have the
+-- (nullable) column, so this is a no-op there; databases created between the
+-- onboarding rework and this change get it here.
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS learner_type TEXT NOT NULL DEFAULT 'none';
 DO $$
 BEGIN
     ALTER TABLE profiles ALTER COLUMN role DROP NOT NULL;

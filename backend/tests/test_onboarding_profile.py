@@ -172,3 +172,19 @@ def test_review_schedule_has_a_fixed_prompt_clause(
 ) -> None:
     vector, _ = derive(make_profile(retention_horizon="long_term"), ruleset)
     assert "14 Tagen" in assemble(vector, catalogue)
+
+
+def test_schema_adds_learner_type_to_a_profiles_table_that_lacks_it(db_conn) -> None:  # type: ignore[no-untyped-def]
+    """A database created before learner_type returned must be migrated in place."""
+    from app.store import db
+
+    db_conn.execute("ALTER TABLE profiles DROP COLUMN learner_type")
+    db_conn.commit()
+    db.reset_pool()
+    db.init_db()
+    with db.connection() as conn:
+        row = conn.execute(
+            "SELECT 1 FROM information_schema.columns "
+            "WHERE table_name = 'profiles' AND column_name = 'learner_type'"
+        ).fetchone()
+    assert row is not None
