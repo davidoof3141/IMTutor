@@ -18,8 +18,8 @@ interface Props {
   dualMode: boolean;
 }
 
-const UNLOCKED_CHAPTER = "3";
-const UNLOCKED_SECTIONS = new Set(["3.1", "3.2", "3.3"]);
+const UNLOCKED_CHAPTER = "4";
+const UNLOCKED_SECTIONS = new Set(["4.1", "4.2", "4.3"]);
 
 function Chevron({ className }: { className?: string }) {
   return (
@@ -174,7 +174,7 @@ export function CurriculumPanel({
       </div>
       {dualMode && (
         <p className="schedule-scope-note">
-          Für diesen Test sind nur die Kapitel 3.1–3.3 freigeschaltet.
+          Für diesen Test sind nur die Kapitel 4.1–4.3 freigeschaltet.
         </p>
       )}
       <ul className="curriculum-list">

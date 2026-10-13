@@ -70,7 +70,7 @@ def onboard(
 
     # Link-invited accounts (the A/B comparison study's participants) land
     # straight on the Lernplan -- their curriculum is already narrowed to
-    # chapters 3.1-3.3 (see app/api/study_mode.py), so free exploration adds
+    # chapters 4.1-4.3 (see app/api/study_mode.py), so free exploration adds
     # nothing and the schedule is the more useful default view.
     if user.has_login_link:
         repos.study_mode.set(profile.learner_id, StudyModeState(mode="training"))

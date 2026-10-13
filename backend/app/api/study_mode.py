@@ -19,8 +19,8 @@ router = APIRouter(prefix="/api/mode", tags=["mode"])
 # participants, see app/api/chat.py's `/compare`) only get this slice of the
 # curriculum unlocked in training mode -- keeps the study's scope small and
 # comparable across participants instead of spanning the whole book.
-LINK_USER_ALLOWED_CHAPTER = "3"
-LINK_USER_ALLOWED_SECTIONS = frozenset({"3.1", "3.2", "3.3"})
+LINK_USER_ALLOWED_CHAPTER = "4"
+LINK_USER_ALLOWED_SECTIONS = frozenset({"4.1", "4.2", "4.3"})
 
 
 class SetModeRequest(BaseModel):

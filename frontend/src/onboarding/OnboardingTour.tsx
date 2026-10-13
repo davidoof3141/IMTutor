@@ -13,7 +13,7 @@ function buildSteps(dualMode: boolean): TourStep[] {
       target: "mode-toggle",
       title: "Erkundung oder Lernplan",
       body: dualMode
-        ? "Du startest direkt im Lernplan. Hier kannst du zwischen den für diesen Test freigeschalteten Kapiteln 3.1–3.3 wechseln."
+        ? "Du startest direkt im Lernplan. Hier kannst du zwischen den für diesen Test freigeschalteten Kapiteln 4.1–4.3 wechseln."
         : "Wechsle hier zwischen freier Erkundung und einem strukturierten Lernplan mit Kapiteln, Fahrplan und nächsten Schritten.",
     },
     {
