@@ -25,9 +25,6 @@ export interface ComparisonState {
 interface Props {
   comparison: ComparisonState;
   onPick: (variant: VariantLabel) => void;
-  onToggleReason: (reason: ReasonTag) => void;
-  onOtherReasonChange: (value: string) => void;
-  onConfirm: () => void;
 }
 
 function VariantColumn({
@@ -70,20 +67,10 @@ function VariantColumn({
 /** The side-by-side personalized-vs-generic reply for one turn, shown to
  * link-invited accounts (see backend app/api/chat.py's /compare route).
  * Nothing here is added to the conversation until a favorite and at least
- * one reason are picked. */
-export function ComparisonTurn({
-  comparison,
-  onPick,
-  onToggleReason,
-  onOtherReasonChange,
-  onConfirm,
-}: Props) {
+ * one reason are picked (the reasons panel is `ComparisonReasons`, which
+ * the chat pins above the input bar). */
+export function ComparisonTurn({ comparison, onPick }: Props) {
   const bothDone = comparison.a.done && comparison.b.done;
-  const canConfirm =
-    comparison.picked !== null &&
-    comparison.reasons.size > 0 &&
-    (!comparison.reasons.has("other") || comparison.otherReason.trim().length > 0) &&
-    !comparison.submitting;
 
   return (
     <div className="comparison-turn">
@@ -106,48 +93,70 @@ export function ComparisonTurn({
           onPick={() => onPick("b")}
         />
       </div>
+    </div>
+  );
+}
 
-      {comparison.picked !== null && (
-        <div className="comparison-reasons-panel">
-          <span className="comparison-label">Warum bevorzugst du diese Antwort?</span>
-          <div className="comparison-reasons">
-            {REASON_ORDER.map((reason) => (
-              <button
-                key={reason}
-                type="button"
-                className={"reason-chip" + (comparison.reasons.has(reason) ? " active" : "")}
-                aria-pressed={comparison.reasons.has(reason)}
-                onClick={() => onToggleReason(reason)}
-                disabled={comparison.submitting}
-              >
-                {REASON_LABELS[reason]}
-              </button>
-            ))}
-          </div>
-          {comparison.reasons.has("other") && (
-            <input
-              type="text"
-              className="comparison-other-input"
-              placeholder="Was hat konkret gefehlt oder überzeugt?"
-              value={comparison.otherReason}
-              onChange={(e) => onOtherReasonChange(e.target.value)}
-              maxLength={500}
-              disabled={comparison.submitting}
-            />
-          )}
-          {comparison.error && <p className="error-banner">{comparison.error}</p>}
-          <div className="comparison-confirm-row">
-            <button
-              type="button"
-              className="primary"
-              disabled={!canConfirm}
-              onClick={onConfirm}
-            >
-              {comparison.submitting ? "Wird gespeichert …" : "Bestätigen"}
-            </button>
-          </div>
-        </div>
+interface ReasonsProps {
+  comparison: ComparisonState;
+  onToggleReason: (reason: ReasonTag) => void;
+  onOtherReasonChange: (value: string) => void;
+  onConfirm: () => void;
+}
+
+/** "Why do you prefer this answer?" -- rendered outside the scrolling message
+ * list so it stays fixed above the input bar while the answers scroll. */
+export function ComparisonReasons({
+  comparison,
+  onToggleReason,
+  onOtherReasonChange,
+  onConfirm,
+}: ReasonsProps) {
+  if (comparison.picked === null) return null;
+  const canConfirm =
+    comparison.reasons.size > 0 &&
+    (!comparison.reasons.has("other") || comparison.otherReason.trim().length > 0) &&
+    !comparison.submitting;
+
+  return (
+    <div className="comparison-reasons-panel">
+      <span className="comparison-label">Warum bevorzugst du diese Antwort?</span>
+      <div className="comparison-reasons">
+        {REASON_ORDER.map((reason) => (
+          <button
+            key={reason}
+            type="button"
+            className={"reason-chip" + (comparison.reasons.has(reason) ? " active" : "")}
+            aria-pressed={comparison.reasons.has(reason)}
+            onClick={() => onToggleReason(reason)}
+            disabled={comparison.submitting}
+          >
+            {REASON_LABELS[reason]}
+          </button>
+        ))}
+      </div>
+      {comparison.reasons.has("other") && (
+        <input
+          type="text"
+          className="comparison-other-input"
+          placeholder="Was hat konkret gefehlt oder überzeugt?"
+          value={comparison.otherReason}
+          onChange={(e) => onOtherReasonChange(e.target.value)}
+          maxLength={500}
+          disabled={comparison.submitting}
+        />
       )}
+      {comparison.error && <p className="error-banner">{comparison.error}</p>}
+      <div className="comparison-confirm-row">
+        <button
+          type="button"
+          className="primary"
+          disabled={!canConfirm}
+          onClick={onConfirm}
+        >
+          {comparison.submitting ? "Wird gespeichert …" : "Bestätigen"}
+        </button>
+      </div>
     </div>
   );
 }

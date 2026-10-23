@@ -43,3 +43,37 @@ def test_learner_preference_counts(db_conn: Conn) -> None:
         "generic_more": 1,
         "tied": 1,
     }
+
+
+def test_decided_counts_by_section(db_conn: Conn) -> None:
+    repo = ComparisonRepository(db_conn)
+    db_conn.execute("INSERT INTO conversations (id, learner_id) VALUES ('c-s', 'sec') ON CONFLICT DO NOTHING")
+    db_conn.commit()
+
+    def make(section: str | None, decide: bool) -> None:
+        cid = repo.create_pending(
+            conversation_id="c-s",
+            learner_id="sec",
+            learner_message="q",
+            ruleset_version="v",
+            personalized_vector={},
+            baseline_vector={},
+            variant_a_kind="personalized",
+            variant_b_kind="generic",
+            book_context="",
+            book_image_refs=[],
+            page_refs=[],
+            attachment_ids=[],
+            lesson_id=None,
+            study_mode={"mode": "training", "chapter_number": "4", "section_number": section},
+        )
+        if decide:
+            repo.finalize(cid, chosen_variant="a", reasons=[], other_reason=None)
+
+    make("4.1", True)
+    make("4.1", True)
+    make("4.2", True)
+    make("4.2", False)  # asked but no pick yet -> not counted
+    make(None, True)  # chapter-level -> not counted
+
+    assert repo.decided_counts_by_section("sec") == {"4.1": 2, "4.2": 1}

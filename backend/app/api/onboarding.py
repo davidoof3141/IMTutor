@@ -71,9 +71,13 @@ def onboard(
     # Link-invited accounts (the A/B comparison study's participants) land
     # straight on the Lernplan -- their curriculum is already narrowed to
     # chapters 4.1-4.3 (see app/api/study_mode.py), so free exploration adds
-    # nothing and the schedule is the more useful default view.
+    # nothing and the schedule is the more useful default view. Section 4.1 is
+    # preselected so they start on the first subchapter.
     if user.has_login_link:
-        repos.study_mode.set(profile.learner_id, StudyModeState(mode="training"))
+        repos.study_mode.set(
+            profile.learner_id,
+            StudyModeState(mode="training", chapter_number="4", section_number="4.1"),
+        )
 
     ruleset = state.rulesets[profile.ruleset_version]
     derived, attribution = derive(profile, ruleset)

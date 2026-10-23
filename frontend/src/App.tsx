@@ -5,6 +5,7 @@ import {
   advanceLesson,
   consumeLoginLinkFromUrl,
   createLesson,
+  getComparisonProgress,
   getConfig,
   getCurriculum,
   getDiagnostic,
@@ -20,9 +21,10 @@ import { useAuth } from "./auth/useAuth";
 import { CurriculumPanel } from "./curriculum/CurriculumPanel";
 import { DiagnosticQuiz, DiagnosticSummary } from "./diagnostic/DiagnosticPanel";
 import { HistorySidebar } from "./history/HistorySidebar";
-import { LessonRail } from "./lesson/LessonRail";
 import { ModeToggle } from "./mode/ModeToggle";
 import { OnboardingForm } from "./onboarding/OnboardingForm";
+import { SectionDoneNotice, QUESTIONS_PER_SECTION } from "./onboarding/SectionDoneNotice";
+import { InviteWelcome, hasSeenInviteWelcome } from "./onboarding/InviteWelcome";
 import { OnboardingTour } from "./onboarding/OnboardingTour";
 import { ProfileMenu } from "./profile/ProfileMenu";
 import { SettingsView } from "./settings/SettingsView";
@@ -87,7 +89,7 @@ function App() {
   const [studyMode, setStudyMode] = useState<StudyModeState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<View>("session");
-  const [setupOpen, setSetupOpen] = useState(true);
+  const [setupOpen, setSetupOpen] = useState(false);
   // The per-chapter diagnostic for one (mode, chapter, section) selection,
   // tagged with the selection it was loaded for so a stale answer for a
   // previous selection is never shown.
@@ -122,6 +124,34 @@ function App() {
   // Link-invited accounts take part in the personalized-vs-generic chat
   // comparison instead of getting a single reply per turn.
   const dualMode = auth.user?.has_login_link ?? false;
+  const [welcomeDone, setWelcomeDone] = useState(false);
+  const [comparisonProgress, setComparisonProgress] = useState<Record<string, number>>({});
+
+  // Subchapter whose 2 questions were just completed -> "continue" notice.
+  const [finishedSection, setFinishedSection] = useState<string | null>(null);
+  const [advanceError, setAdvanceError] = useState<string | null>(null);
+  const comparisonProgressRef = useRef(comparisonProgress);
+  comparisonProgressRef.current = comparisonProgress;
+
+  function refreshComparisonProgress(announceFor?: string | null) {
+    if (!dualMode || !learnerId) return;
+    getComparisonProgress(learnerId)
+      .then((next) => {
+        if (
+          announceFor &&
+          (comparisonProgressRef.current[announceFor] ?? 0) < QUESTIONS_PER_SECTION &&
+          (next[announceFor] ?? 0) >= QUESTIONS_PER_SECTION
+        ) {
+          setFinishedSection(announceFor);
+        }
+        setComparisonProgress(next);
+      })
+      .catch(() => {
+        // Best-effort -- progress display just stays as it was.
+      });
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => refreshComparisonProgress(), [dualMode, learnerId]);
 
   function openConversation(id: string | null) {
     setActiveConversationId(id);
@@ -144,7 +174,26 @@ function App() {
       next.chapter_number !== studyMode.chapter_number ||
       next.section_number !== studyMode.section_number;
     setStudyMode(next);
-    if (changed) openConversation(null);
+    if (changed) {
+      openConversation(null);
+      setFinishedSection(null);
+    }
+  }
+
+  async function handleContinueToNextSection(nextSection: string) {
+    if (!learnerId) return;
+    setAdvanceError(null);
+    try {
+      handleSelectionChange(
+        await updateStudyMode(learnerId, {
+          mode: "training",
+          chapter_number: "4",
+          section_number: nextSection,
+        }),
+      );
+    } catch (err) {
+      setAdvanceError(err instanceof ApiError ? err.message : "Der Server ist nicht erreichbar.");
+    }
   }
 
   function toggleScheduleCollapsed() {
@@ -351,11 +400,16 @@ function App() {
 
   if (!learnerId || !config || !studyMode) {
     return (
-      <OnboardingForm
-        onComplete={handleOnboardingComplete}
-        theme={theme}
-        onToggleTheme={toggleTheme}
-      />
+      <>
+        <OnboardingForm
+          onComplete={handleOnboardingComplete}
+          theme={theme}
+          onToggleTheme={toggleTheme}
+        />
+        {auth.user.has_login_link && (
+          <InviteWelcome userId={auth.user.id} onClose={() => setWelcomeDone(true)} />
+        )}
+      </>
     );
   }
 
@@ -468,18 +522,8 @@ function App() {
               collapsed={scheduleCollapsed}
               onToggleCollapsed={toggleScheduleCollapsed}
               dualMode={dualMode}
+              comparisonProgress={comparisonProgress}
             />
-            {!scheduleCollapsed && !diagnosticPending && !summaryOpen && (
-              <LessonRail
-                studyMode={studyMode}
-                lesson={lesson}
-                busy={lessonBusy}
-                error={lessonError}
-                onCreate={() => void handleCreateLesson()}
-                onAdvance={() => void handleAdvanceLesson()}
-                onAbandon={() => void handleAbandonLesson()}
-              />
-            )}
           </aside>
         )}
 
@@ -503,6 +547,14 @@ function App() {
               onContinue={() => setSummaryFor(null)}
             />
           )}
+          {dualMode && finishedSection !== null && finishedSection === studyMode.section_number && (
+            <SectionDoneNotice
+              section={finishedSection}
+              error={advanceError}
+              onContinue={(next) => void handleContinueToNextSection(next)}
+              onDismiss={() => setFinishedSection(null)}
+            />
+          )}
           {!diagnosticPending && !summaryOpen && (
             <ChatPanel
               key={chatEpoch}
@@ -512,6 +564,7 @@ function App() {
               studyMode={studyMode}
               conversationId={activeConversationId}
               dualMode={dualMode}
+              onComparisonDecided={() => refreshComparisonProgress(studyMode.section_number)}
               onConversationResolved={setActiveConversationId}
               onNewConversation={() => openConversation(null)}
               newConversationDisabled={activeConversationId === null}
@@ -543,7 +596,10 @@ function App() {
         />
       )}
 
-      {!inSettings && <OnboardingTour learnerId={learnerId} dualMode={dualMode} />}
+      {dualMode && <InviteWelcome userId={auth.user.id} onClose={() => setWelcomeDone(true)} />}
+      {!inSettings && (!dualMode || welcomeDone || hasSeenInviteWelcome(auth.user.id)) && (
+        <OnboardingTour learnerId={learnerId} dualMode={dualMode} />
+      )}
     </div>
   );
 }

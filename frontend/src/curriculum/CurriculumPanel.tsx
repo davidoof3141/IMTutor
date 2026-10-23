@@ -16,7 +16,13 @@ interface Props {
    * LINK_USER_ALLOWED_CHAPTER/LINK_USER_ALLOWED_SECTIONS on the backend,
    * which is what actually enforces this. */
   dualMode: boolean;
+  /** Decided comparison turns per section number; drives the progress bar
+   * and checkboxes for link-invited accounts. */
+  comparisonProgress: Record<string, number>;
 }
+
+/** Questions (with a picked answer) needed per subchapter. */
+const REQUIRED_PER_SECTION = 2;
 
 const UNLOCKED_CHAPTER = "4";
 const UNLOCKED_SECTIONS = new Set(["4.1", "4.2", "4.3"]);
@@ -71,10 +77,17 @@ export function CurriculumPanel({
   collapsed,
   onToggleCollapsed,
   dualMode,
+  comparisonProgress,
 }: Props) {
   const [expanded, setExpanded] = useState<string | null>(studyMode.chapter_number);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const sectionCount = (n: string) => Math.min(comparisonProgress[n] ?? 0, REQUIRED_PER_SECTION);
+  const sectionDone = (n: string) => sectionCount(n) >= REQUIRED_PER_SECTION;
+  const totalDone = Array.from(UNLOCKED_SECTIONS).reduce((sum, n) => sum + sectionCount(n), 0);
+  const totalRequired = UNLOCKED_SECTIONS.size * REQUIRED_PER_SECTION;
+  const allDone = totalDone >= totalRequired;
 
   function isChapterLocked(chapter: Chapter): boolean {
     return dualMode && chapter.number !== UNLOCKED_CHAPTER;
@@ -177,6 +190,26 @@ export function CurriculumPanel({
           Für diesen Test sind nur die Kapitel 4.1–4.3 freigeschaltet.
         </p>
       )}
+      {dualMode && (
+        <div className="test-progress">
+          <div className="test-progress-label">
+            <span>Fortschritt</span>
+            <span>{allDone ? "Abgeschlossen ✓" : `${totalDone} / ${totalRequired} Fragen`}</span>
+          </div>
+          <div
+            className="test-progress-bar"
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={totalRequired}
+            aria-valuenow={totalDone}
+          >
+            <div
+              className={"test-progress-fill" + (allDone ? " is-done" : "")}
+              style={{ width: `${(totalDone / totalRequired) * 100}%` }}
+            />
+          </div>
+        </div>
+      )}
       <ul className="curriculum-list">
         {curriculum.map((chapter) => {
           const isExpanded = expanded === chapter.number;
@@ -226,6 +259,19 @@ export function CurriculumPanel({
                               }
                               onClick={() => handleSectionClick(chapter, section.number)}
                             >
+                              {dualMode && !sectionLocked && (
+                                <span
+                                  className={"section-check" + (sectionDone(section.number) ? " is-done" : "")}
+                                  role="img"
+                                  aria-label={
+                                    sectionDone(section.number)
+                                      ? "Abgeschlossen"
+                                      : `${sectionCount(section.number)} von ${REQUIRED_PER_SECTION} Fragen`
+                                  }
+                                >
+                                  {sectionDone(section.number) ? "✓" : ""}
+                                </span>
+                              )}
                               {section.number} {section.title}
                               {sectionLocked && <LockIcon className="section-lock" />}
                             </button>

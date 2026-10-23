@@ -492,7 +492,7 @@ a:hover {
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  padding: 22px 56px;
+  padding: 22px 24px;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -776,6 +776,55 @@ a:hover {
   margin: 0 6px 10px;
 }
 
+.test-progress {
+  margin: 0 6px 12px;
+}
+
+.test-progress-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-faint);
+  margin-bottom: 4px;
+}
+
+.test-progress-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.test-progress-fill {
+  height: 100%;
+  background: var(--accent, #4f7cff);
+  transition: width 0.3s ease;
+}
+
+.test-progress-fill.is-done {
+  background: #2e9d5b;
+}
+
+.section-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  margin-right: 6px;
+  vertical-align: -2px;
+  border: 1.5px solid var(--text-faint);
+  border-radius: 3px;
+  font-size: 10px;
+  line-height: 1;
+  color: #fff;
+}
+
+.section-check.is-done {
+  background: #2e9d5b;
+  border-color: #2e9d5b;
+}
+
 .curriculum-chapter.is-locked,
 .curriculum-section.is-locked {
   color: var(--text-faint);
@@ -826,6 +875,9 @@ a:hover {
 /* --- Chat --- */
 
 .chat-panel {
+  /* The input area keeps its original inset (56px sides, 800px column) while
+     the message list uses the tighter 24px / 960px one. */
+  --chat-input-max: min(800px, calc(100% - 64px));
   flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
@@ -863,15 +915,19 @@ a:hover {
   overflow-y: auto;
   margin-bottom: 12px;
   /* Extend into .chat-main's right padding so the scrollbar sits flush against
-     the panel edge instead of floating 56px in from it. The inline padding
-     centres the bubbles in the same 800px column as the input row. */
-  --chat-gutter: max(0px, calc((100% - 800px) / 2));
-  margin-right: -56px;
+     the panel edge instead of floating 24px in from it. The inline padding
+     centres the bubbles in a wide 1400px column (wider than the input row). */
+  --chat-gutter: max(0px, calc((100% - 1400px) / 2));
+  margin-right: -24px;
   padding-left: var(--chat-gutter);
-  padding-right: calc(var(--chat-gutter) + 56px);
+  padding-right: calc(var(--chat-gutter) + 24px);
 }
 
 @media (max-width: 960px) {
+  .chat-panel {
+    --chat-input-max: 800px;
+  }
+
   .chat-messages {
     margin-right: -20px;
     padding-right: calc(var(--chat-gutter) + 20px);
@@ -881,7 +937,7 @@ a:hover {
 .chat-message {
   padding: 12px 15px;
   border-radius: 6px;
-  max-width: min(85%, 620px);
+  max-width: min(92%, 1000px);
   white-space: pre-wrap;
   font-size: 13px;
   line-height: 1.6;
@@ -1031,8 +1087,13 @@ a:hover {
   flex-wrap: wrap;
   gap: 5px;
   width: 100%;
-  max-width: 800px;
+  max-width: var(--chat-input-max);
   margin: 0 auto 8px;
+  /* Pinned above the input row (outside the scrolling message list); capped
+     so a long list of chips can't squeeze the conversation out. */
+  flex: none;
+  max-height: 96px;
+  overflow-y: auto;
 }
 
 .chat-suggestion-chip {
@@ -1061,7 +1122,7 @@ a:hover {
   display: flex;
   gap: 6px;
   width: 100%;
-  max-width: 800px;
+  max-width: var(--chat-input-max);
   margin: 0 auto;
   background: var(--surface);
   border: 1px solid var(--border-strong);
@@ -1086,7 +1147,7 @@ a:hover {
   display: flex;
   gap: 6px;
   width: 100%;
-  max-width: 800px;
+  max-width: var(--chat-input-max);
   margin: 8px auto 0;
 }
 
@@ -1120,7 +1181,7 @@ a:hover {
   flex-wrap: wrap;
   gap: 6px;
   width: 100%;
-  max-width: 800px;
+  max-width: var(--chat-input-max);
   margin: 0 auto 8px;
 }
 
@@ -1290,6 +1351,13 @@ a:hover {
 }
 
 .comparison-reasons-panel {
+  /* Pinned above the input row, outside the scrolling message list. */
+  flex: none;
+  width: 100%;
+  max-width: var(--chat-input-max);
+  margin: 0 auto 8px;
+  max-height: 40vh;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -2865,4 +2933,37 @@ a:hover {
 .info-tip:hover .info-tip-text,
 .info-tip:focus .info-tip-text {
   display: block;
+}
+
+/* --- Subchapter completed notice (invited accounts) --- */
+
+.section-done-notice {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 14px;
+  font-size: 13px;
+  border: 1px solid #2e9d5b;
+  border-radius: 8px;
+  background: color-mix(in srgb, #2e9d5b 12%, var(--surface));
+}
+
+.section-done-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: none;
+}
+
+.section-done-error {
+  color: var(--danger, #c0392b);
+}
+
+@media (max-width: 600px) {
+  .section-done-notice {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }

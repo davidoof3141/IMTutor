@@ -48,7 +48,12 @@ def _link_learner(raw_client: TestClient, username: str = "linked") -> str:
         },
     )
     assert onboarded.status_code == 200, onboarded.text
-    return str(onboarded.json()["profile"]["learner_id"])
+    learner_id = str(onboarded.json()["profile"]["learner_id"])
+    # Onboarding preselects 4.1, whose diagnostic would block chat; these tests
+    # are about the comparison flow, so drop back to an unselected Lernplan.
+    cleared = raw_client.put(f"/api/mode/{learner_id}", json={"mode": "training"})
+    assert cleared.status_code == 200, cleared.text
+    return learner_id
 
 
 def _read_ndjson(response) -> list[dict]:
@@ -218,3 +223,47 @@ def test_another_learners_comparison_is_not_reachable(
         json={"variant": "a", "reasons": ["detail"]},
     )
     assert r.status_code == 404
+
+
+def test_link_onboarding_preselects_section_4_1(raw_client: TestClient) -> None:
+    learner_id = _link_learner(raw_client)
+    # _link_learner clears the selection afterwards; re-onboarding state is
+    # covered by checking a fresh account directly.
+    admin = login(raw_client, **SUPERUSER)
+    r = raw_client.post(
+        "/api/users/link", json={"username": "fresh"}, headers={"Authorization": f"Bearer {admin}"}
+    )
+    token = r.json()["link_token"]
+    signed_in = raw_client.post("/api/auth/login-link", json={"token": token})
+    raw_client.headers["Authorization"] = f"Bearer {signed_in.json()['token']}"
+    onboarded = raw_client.post(
+        "/api/onboarding",
+        json={"prior_knowledge_seed": "low", "learning_goal": "certification", "industry": "healthcare"},
+    )
+    fresh_id = onboarded.json()["profile"]["learner_id"]
+    assert fresh_id != learner_id
+    mode = raw_client.get(f"/api/mode/{fresh_id}").json()
+    assert mode == {"mode": "training", "chapter_number": "4", "section_number": "4.1"}
+
+
+def test_link_user_question_quota_and_blocked_bypass_routes(
+    raw_client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _stub_llm(monkeypatch)
+    monkeypatch.setattr("app.api.chat.MAX_LINK_USER_QUESTIONS", 2)
+    learner_id = _link_learner(raw_client)
+
+    # The single-answer route would sidestep the quota.
+    assert raw_client.post(f"/api/chat/{learner_id}", json={"message": "Hi"}).status_code == 403
+    assert raw_client.post(f"/api/lesson/{learner_id}").status_code == 403
+
+    for _ in range(2):
+        with raw_client.stream(
+            "POST", f"/api/chat/{learner_id}/compare", json={"message": "Frage"}
+        ) as r:
+            assert r.status_code == 200
+            _read_ndjson(r)
+
+    # Started-but-undecided comparisons count too.
+    blocked = raw_client.post(f"/api/chat/{learner_id}/compare", json={"message": "Noch eine"})
+    assert blocked.status_code == 429

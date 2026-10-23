@@ -15,7 +15,7 @@ import {
   uploadAttachment,
 } from "../api/client";
 import type { Attachment, BookImageRef, ReasonTag, StudyModeState, VariantLabel } from "../types";
-import { ComparisonTurn, type ComparisonState } from "./ComparisonTurn";
+import { ComparisonReasons, ComparisonTurn, type ComparisonState } from "./ComparisonTurn";
 
 // Generic fallback shown above the input before the learner has said anything.
 // In training mode the chapter/section's own pre-generated starter questions
@@ -241,6 +241,8 @@ interface Props {
   /** Link-invited accounts get two answers per turn (one personalized, one
    * generic) and must pick a favorite + reason before continuing. */
   dualMode: boolean;
+  /** Called after a comparison pick is saved, so progress can be refreshed. */
+  onComparisonDecided?: () => void;
 }
 
 export function ChatPanel({
@@ -255,6 +257,7 @@ export function ChatPanel({
   historyOpen,
   onToggleHistory,
   dualMode,
+  onComparisonDecided,
 }: Props) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
@@ -563,6 +566,7 @@ export function ChatPanel({
         },
       ]);
       setComparison(null);
+      onComparisonDecided?.();
       if (comparisonConvId) {
         getFollowUpSuggestions(learnerId, comparisonConvId)
           .then((r) => setSuggestions(r.questions))
@@ -643,11 +647,8 @@ export function ChatPanel({
             Stell dem Tutor eine Frage, um zu beginnen.
           </p>
         )}
-        {!loading && messages.length === 0 && suggestionChips}
         {messages.map((m, i) => {
           const streaming = sending && i === messages.length - 1 && m.role === "tutor";
-          const isLastFinishedTutorMessage =
-            i === messages.length - 1 && m.role === "tutor" && !streaming;
           return (
             <Fragment key={i}>
               <div className={`chat-message ${m.role}` + (streaming ? " streaming" : "")}>
@@ -680,7 +681,6 @@ export function ChatPanel({
                   <PageReferences pages={m.pageRefs} onOpenPage={setPdfModalPage} />
                 )}
               </div>
-              {isLastFinishedTutorMessage && suggestionChips}
             </Fragment>
           );
         })}
@@ -688,13 +688,19 @@ export function ChatPanel({
           <ComparisonTurn
             comparison={comparison}
             onPick={handlePickVariant}
-            onToggleReason={handleToggleReason}
-            onOtherReasonChange={handleOtherReasonChange}
-            onConfirm={() => void handleConfirmChoice()}
           />
         )}
       </div>
+      {comparison && (
+        <ComparisonReasons
+          comparison={comparison}
+          onToggleReason={handleToggleReason}
+          onOtherReasonChange={handleOtherReasonChange}
+          onConfirm={() => void handleConfirmChoice()}
+        />
+      )}
       {error && <p className="error-banner">{error}</p>}
+      {!loading && suggestionChips}
       {pendingAttachments.length > 0 && (
         <div className="chat-pending-attachments">
           {pendingAttachments.map((a) => (

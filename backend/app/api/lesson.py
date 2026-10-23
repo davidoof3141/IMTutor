@@ -173,6 +173,8 @@ def create_lesson(
     """Plans a lesson for the learner's current training-mode selection, then
     runs its first step as a server-initiated turn -- the learner lands on a
     thread that already has content, no message required from them."""
+    if user.has_login_link:
+        raise HTTPException(status_code=403, detail="lessons are not available for this account")
     authorize_learner(learner_id, user, repos)
     profile = repos.profiles.get(learner_id)
     if profile is None:
@@ -256,6 +258,8 @@ def advance_lesson(
     """Runs the next step's turn. Free-text messages in the thread are
     ordinary tutoring turns (app/api/chat.py) and never call this -- the
     pointer only moves on an explicit advance."""
+    if user.has_login_link:
+        raise HTTPException(status_code=403, detail="lessons are not available for this account")
     plan = _get_owned_plan(conversation_id, repos, user)
     if plan.status != "active":
         raise HTTPException(status_code=409, detail=f"lesson is {plan.status}, not active")

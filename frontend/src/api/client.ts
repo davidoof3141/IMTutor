@@ -410,6 +410,12 @@ export function chooseComparisonVariant(
   });
 }
 
+/** Decided comparison turns (question asked + answer picked) per section
+ * number, e.g. {"4.1": 2}. */
+export function getComparisonProgress(learnerId: string): Promise<Record<string, number>> {
+  return request(`/api/chat/${learnerId}/compare/progress`);
+}
+
 /** Uploads a file, returning its metadata. `conversationId` may be null for
  * a fresh, unsaved thread -- the server links the attachment once the turn
  * that references it actually resolves a conversation. */

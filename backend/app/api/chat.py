@@ -41,6 +41,13 @@ from app.store.conversations import MAX_HISTORY_MESSAGES
 from app.store.study_mode import StudyModeState
 from app.store.users import User
 
+# Hard cap on questions a link-invited study participant can ask in total.
+# Deliberately not exposed to the frontend -- enforced here only.
+MAX_LINK_USER_QUESTIONS = 30
+QUOTA_EXHAUSTED_MESSAGE = (
+    "Für diesen Test sind keine weiteren Fragen möglich. Vielen Dank für deine Teilnahme!"
+)
+
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 logger = logging.getLogger("app.chat")
 
@@ -175,6 +182,10 @@ def chat(
     run before the stream starts, so the client still sees a proper 4xx/503.
     The turn log is written once the stream completes.
     """
+    if user.has_login_link:
+        # Study participants only chat through /compare, where the question
+        # quota is enforced; this route would be a way around it.
+        raise HTTPException(status_code=403, detail="use the comparison chat for this account")
     authorize_learner(learner_id, user, repos)
     profile = repos.profiles.get(learner_id)
     if profile is None:
@@ -328,6 +339,8 @@ def compare(
     profile = repos.profiles.get(learner_id)
     if profile is None:
         raise HTTPException(status_code=404, detail="learner not found")
+    if repos.comparisons.count_for_learner(learner_id) >= MAX_LINK_USER_QUESTIONS:
+        raise HTTPException(status_code=429, detail=QUOTA_EXHAUSTED_MESSAGE)
 
     ruleset = state.rulesets[profile.ruleset_version]
     catalogue = state.catalogues[profile.ruleset_version]
@@ -395,6 +408,18 @@ def compare(
     headers = _response_headers(setup)
     headers["X-Comparison-Id"] = comparison_id
     return StreamingResponse(event_stream(), media_type="application/x-ndjson", headers=headers)
+
+
+@router.get("/{learner_id}/compare/progress")
+def comparison_progress(
+    learner_id: str,
+    repos: Repos = Depends(get_repos),
+    user: User = Depends(get_current_user),
+) -> dict[str, int]:
+    """Decided comparisons per section, for the study participant's progress
+    bar and sidebar checkboxes."""
+    authorize_learner(learner_id, user, repos)
+    return repos.comparisons.decided_counts_by_section(learner_id)
 
 
 class ChooseComparisonRequest(BaseModel):
@@ -530,6 +555,11 @@ def get_suggestions(
     profile = repos.profiles.get(learner_id)
     if profile is None:
         raise HTTPException(status_code=404, detail="learner not found")
+    if (
+        user.has_login_link
+        and repos.comparisons.count_for_learner(learner_id) >= MAX_LINK_USER_QUESTIONS
+    ):
+        raise HTTPException(status_code=429, detail=QUOTA_EXHAUSTED_MESSAGE)
 
     conversation = repos.conversations.get(body.conversation_id)
     if conversation is None or conversation.learner_id != learner_id:

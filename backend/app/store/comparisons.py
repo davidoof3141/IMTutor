@@ -181,6 +181,31 @@ class ComparisonRepository:
         ).fetchall()
         return [dict(row) for row in rows]
 
+    def count_for_learner(self, learner_id: str) -> int:
+        """Every comparison turn this learner has started (decided or not), so
+        abandoning an answer mid-way doesn't hand back a question."""
+        row = self._conn.execute(
+            "SELECT COUNT(*) AS n FROM answer_comparisons WHERE learner_id = %s",
+            (learner_id,),
+        ).fetchone()
+        assert row is not None
+        return row["n"]
+
+    def decided_counts_by_section(self, learner_id: str) -> dict[str, int]:
+        """How many decided comparisons (a question asked + an answer picked)
+        this learner has per section, keyed by section number ("4.1", ...)."""
+        rows = self._conn.execute(
+            """
+            SELECT study_mode->>'section_number' AS section, COUNT(*) AS count
+            FROM answer_comparisons
+            WHERE learner_id = %s AND decided_at IS NOT NULL
+              AND study_mode->>'section_number' IS NOT NULL
+            GROUP BY section
+            """,
+            (learner_id,),
+        ).fetchall()
+        return {row["section"]: row["count"] for row in rows}
+
     def decided_and_pending_counts(self) -> tuple[int, int]:
         row = self._conn.execute(
             """
