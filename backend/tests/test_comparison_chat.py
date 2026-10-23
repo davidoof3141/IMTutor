@@ -267,3 +267,39 @@ def test_link_user_question_quota_and_blocked_bypass_routes(
     # Started-but-undecided comparisons count too.
     blocked = raw_client.post(f"/api/chat/{learner_id}/compare", json={"message": "Noch eine"})
     assert blocked.status_code == 429
+
+
+def _make_group_link(raw_client: TestClient, **body: object) -> str:
+    admin = login(raw_client, **SUPERUSER)
+    r = raw_client.post(
+        "/api/users/group-links", json=body, headers={"Authorization": f"Bearer {admin}"}
+    )
+    assert r.status_code == 201, r.text
+    return str(r.json()["token"])
+
+
+def test_group_link_creates_link_users_up_to_its_cap(raw_client: TestClient) -> None:
+    token = _make_group_link(raw_client, label="Kurs A", max_uses=2)
+    raw_client.headers.pop("Authorization", None)
+
+    seen = set()
+    for _ in range(2):
+        r = raw_client.post("/api/auth/join", json={"token": token})
+        assert r.status_code == 200, r.text
+        assert r.json()["user"]["has_login_link"] is True
+        seen.add(r.json()["user"]["id"])
+    assert len(seen) == 2
+
+    assert raw_client.post("/api/auth/join", json={"token": token}).status_code == 401
+    assert raw_client.post("/api/auth/join", json={"token": "nope"}).status_code == 401
+
+
+def test_revoked_group_link_stops_working(raw_client: TestClient) -> None:
+    token = _make_group_link(raw_client, max_uses=5)
+    admin = login(raw_client, **SUPERUSER)
+    headers = {"Authorization": f"Bearer {admin}"}
+    link_id = raw_client.get("/api/users/group-links", headers=headers).json()[0]["id"]
+    assert raw_client.post(f"/api/users/group-links/{link_id}/revoke", headers=headers).status_code == 204
+
+    raw_client.headers.pop("Authorization", None)
+    assert raw_client.post("/api/auth/join", json={"token": token}).status_code == 401

@@ -19,6 +19,7 @@ from app.store.comparisons import ComparisonRepository
 from app.store.conversations import ConversationRepository
 from app.store.db import connection, ensure_schema
 from app.store.lessons import LessonRepository
+from app.store.group_links import GroupLinkRepository
 from app.store.login_links import LoginLinkRepository
 from app.store.override_changes import OverrideChangeRepository
 from app.store.overrides import OverrideRepository
@@ -57,6 +58,7 @@ class Repos:
     turn_logs: TurnLogRepository
     users: UserRepository
     login_links: LoginLinkRepository
+    group_links: GroupLinkRepository
     conversations: ConversationRepository
     comparisons: ComparisonRepository
     attachments: AttachmentRepository
@@ -78,6 +80,7 @@ def get_repos() -> Iterator[Repos]:
             turn_logs=TurnLogRepository(conn),
             users=UserRepository(conn),
             login_links=LoginLinkRepository(conn),
+            group_links=GroupLinkRepository(conn),
             conversations=ConversationRepository(conn),
             comparisons=ComparisonRepository(conn),
             attachments=AttachmentRepository(conn),

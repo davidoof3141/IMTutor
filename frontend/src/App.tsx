@@ -4,8 +4,11 @@ import {
   abandonLesson,
   advanceLesson,
   consumeLoginLinkFromUrl,
+  consumeGroupJoinFromUrl,
   createLesson,
   getComparisonProgress,
+  getToken,
+  hasPendingGroupJoin,
   getConfig,
   getCurriculum,
   getDiagnostic,
@@ -60,8 +63,10 @@ function App() {
   // the login screen while that request is in flight. The presence check is
   // read-only (safe during render); consuming the token rewrites the URL and
   // must happen exactly once, guarded against StrictMode's double effect.
+  // A shared group link (?join=...) is only spent when this browser has no
+  // session yet -- otherwise a refresh or second click would burn a sign-up.
   const [linkLogin, setLinkLogin] = useState<"idle" | "checking" | "failed">(() =>
-    hasPendingLoginLink() ? "checking" : "idle",
+    hasPendingLoginLink() || (hasPendingGroupJoin() && !getToken()) ? "checking" : "idle",
   );
   const [linkLoginError, setLinkLoginError] = useState<string | null>(null);
   const linkConsumedRef = useRef(false);
@@ -69,10 +74,11 @@ function App() {
   useEffect(() => {
     if (linkConsumedRef.current) return;
     linkConsumedRef.current = true;
+    const joinToken = consumeGroupJoinFromUrl();
     const token = consumeLoginLinkFromUrl();
-    if (!token) return;
-    auth
-      .loginWithLink(token)
+    const [useJoin, secret] = token ? [false, token] : [true, joinToken];
+    if (!secret || (useJoin && getToken())) return;
+    (useJoin ? auth.joinWithGroupLink(secret) : auth.loginWithLink(secret))
       .then(() => setLinkLogin("idle"))
       .catch((err) => {
         setLinkLogin("failed");

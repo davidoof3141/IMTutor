@@ -64,6 +64,22 @@ CREATE TABLE IF NOT EXISTS login_links (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Shared "group" sign-up links: one token that lets up to max_uses people each
+-- create their own link-invited account (see GroupLinkRepository). Only the
+-- token's hash is stored. uses is bumped atomically on every claim, so the
+-- cap holds under concurrent requests.
+CREATE TABLE IF NOT EXISTS group_links (
+    id TEXT PRIMARY KEY,
+    token_hash TEXT NOT NULL UNIQUE,
+    label TEXT NOT NULL DEFAULT '',
+    max_uses INTEGER NOT NULL CHECK (max_uses > 0),
+    uses INTEGER NOT NULL DEFAULT 0,
+    expires_at TIMESTAMPTZ NOT NULL,
+    revoked BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS group_link_id TEXT;
+
 CREATE TABLE IF NOT EXISTS profiles (
     learner_id TEXT PRIMARY KEY,
     user_id TEXT REFERENCES users(id),

@@ -1,3 +1,4 @@
+import secrets
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -20,6 +21,10 @@ _LOGIN_MAX_ATTEMPTS = 10
 _LOGIN_WINDOW_SECONDS = 5 * 60
 _REGISTER_MAX_ATTEMPTS = 10
 _REGISTER_WINDOW_SECONDS = 60 * 60
+# Sign-ups through a shared group link, per client. Loose enough that a class
+# behind one NAT can all join; the link's own max_uses is the real cap.
+_JOIN_MAX_ATTEMPTS = 20
+_JOIN_WINDOW_SECONDS = 60 * 60
 
 
 def _client_id(request: Request) -> str:
@@ -104,6 +109,32 @@ def login(
         raise HTTPException(status_code=403, detail="account is awaiting admin approval")
     if user.status == "rejected":
         raise HTTPException(status_code=403, detail="account was rejected by an admin")
+    return LoginResponse(token=create_token(user.id, user.token_version), user=user)
+
+
+@router.post("/join", response_model=LoginResponse)
+def join_with_group_link(
+    body: LoginLinkRequest, request: Request, repos: Repos = Depends(get_repos)
+) -> LoginResponse:
+    """Shared-link sign-up: spends one slot of an admin-created group link to
+    create a fresh link-invited account, and signs it in. Each slot makes one
+    account, so a leaked link can create at most `max_uses` of them."""
+    _rate_limit(request, repos, "join", _JOIN_MAX_ATTEMPTS, _JOIN_WINDOW_SECONDS)
+    group_link_id = repos.group_links.claim(body.token)
+    if group_link_id is None:
+        raise HTTPException(status_code=401, detail="invalid or expired link")
+    user = repos.users.create(
+        user_id=str(uuid.uuid4()),
+        username=f"learner-{secrets.token_hex(4)}",
+        password_hash=hash_password(secrets.token_urlsafe(32)),
+        role="learner",
+        status="approved",
+    )
+    repos.group_links.attach_user(user.id, group_link_id)
+    # Gives the account the link-invited ("has_login_link") behaviour: the
+    # comparison chat, the restricted curriculum and the question quota.
+    repos.login_links.issue(user.id)
+    user = user.model_copy(update={"has_login_link": True})
     return LoginResponse(token=create_token(user.id, user.token_version), user=user)
 
 

@@ -5,6 +5,7 @@ import {
   getMe,
   getToken,
   login as apiLogin,
+  joinWithGroupLink as apiJoinWithGroupLink,
   loginWithLink as apiLoginWithLink,
   register as apiRegister,
   setToken,
@@ -67,6 +68,13 @@ export function useAuth() {
     setState({ status: "authed", user: me.user, learnerId: me.learner_id });
   }, []);
 
+  const joinWithGroupLink = useCallback(async (token: string) => {
+    const result = await apiJoinWithGroupLink(token);
+    setToken(result.token);
+    const me = await getMe();
+    setState({ status: "authed", user: me.user, learnerId: me.learner_id });
+  }, []);
+
   const register = useCallback(
     (username: string, password: string) => apiRegister(username, password),
     [],
@@ -91,5 +99,5 @@ export function useAuth() {
     setState((s) => ({ ...s, learnerId }));
   }, []);
 
-  return { ...state, login, loginWithLink, register, changePassword, logout, setLearnerId };
+  return { ...state, login, loginWithLink, joinWithGroupLink, register, changePassword, logout, setLearnerId };
 }

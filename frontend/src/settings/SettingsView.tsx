@@ -13,6 +13,7 @@ import { AdminStats } from "./AdminStats";
 import { CHAT_MODELS, CHAT_MODEL_GROUPS } from "./chatModel";
 import { CreateLinkUserModal } from "./CreateLinkUserModal";
 import { CreateUserModal } from "./CreateUserModal";
+import { GroupLinks } from "./GroupLinks";
 import { LinkResultModal } from "./LinkResultModal";
 
 interface Props {
@@ -143,6 +144,8 @@ export function SettingsView({ chatModel, onChatModelChange, currentUserId }: Pr
           </p>
           <AdminDiagnosticResults />
         </section>
+
+        <GroupLinks />
 
         <section className="settings-card">
           <div className="settings-card-head">

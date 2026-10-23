@@ -140,6 +140,66 @@ export function consumeLoginLinkFromUrl(): string | null {
   return token;
 }
 
+export function joinWithGroupLink(token: string): Promise<LoginResponse> {
+  return request("/api/auth/join", {
+    method: "POST",
+    body: JSON.stringify({ token }),
+  });
+}
+
+const GROUP_JOIN_PARAM = "join";
+
+/** Turns a raw group-link token into the shared URL an admin sends out. */
+export function buildGroupJoinUrl(token: string): string {
+  return `${window.location.origin}/?${GROUP_JOIN_PARAM}=${encodeURIComponent(token)}`;
+}
+
+export function hasPendingGroupJoin(): boolean {
+  return new URLSearchParams(window.location.search).has(GROUP_JOIN_PARAM);
+}
+
+/** Reads and strips the group-join token from the URL (side effect -- call
+ * once, from an effect). */
+export function consumeGroupJoinFromUrl(): string | null {
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get(GROUP_JOIN_PARAM);
+  if (token) window.history.replaceState({}, "", window.location.pathname);
+  return token;
+}
+
+export interface GroupLink {
+  id: string;
+  label: string;
+  max_uses: number;
+  uses: number;
+  expires_at: string;
+  revoked: boolean;
+  created_at: string;
+}
+
+export function createGroupLink(
+  label: string,
+  maxUses: number,
+  expiresInDays: number,
+): Promise<{ link: GroupLink; token: string }> {
+  return request("/api/users/group-links", {
+    method: "POST",
+    body: JSON.stringify({ label, max_uses: maxUses, expires_in_days: expiresInDays }),
+  });
+}
+
+export function listGroupLinks(): Promise<GroupLink[]> {
+  return request("/api/users/group-links");
+}
+
+export async function revokeGroupLink(id: string): Promise<void> {
+  const response = await fetch(`${BASE_URL}/api/users/group-links/${id}/revoke`, {
+    method: "POST",
+    headers: authHeaders(),
+  });
+  if (!response.ok) await throwFromResponse(response);
+}
+
 export function changePassword(
   currentPassword: string,
   newPassword: string,

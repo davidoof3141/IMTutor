@@ -2,6 +2,10 @@ import { useState } from "react";
 
 interface Props {
   username: string;
+  /** Overrides the default "Link für {username}" heading. */
+  title?: string;
+  /** Overrides the default warning under the link. */
+  warning?: string;
   link: string;
   onClose: () => void;
 }
@@ -9,7 +13,7 @@ interface Props {
 /** Shows a freshly (re-)generated login link once. The raw token only ever
  * exists in this response -- the server keeps just its hash -- so this is
  * the only place it can be copied from. */
-export function LinkResultModal({ username, link, onClose }: Props) {
+export function LinkResultModal({ username, title, warning, link, onClose }: Props) {
   const [copied, setCopied] = useState(false);
 
   async function handleCopy() {
@@ -32,7 +36,7 @@ export function LinkResultModal({ username, link, onClose }: Props) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="modal-header">
-          <h2 id="link-result-title">Link für {username}</h2>
+          <h2 id="link-result-title">{title ?? `Link für ${username}`}</h2>
           <button type="button" className="modal-close" aria-label="Schließen" onClick={onClose}>
             ✕
           </button>
@@ -48,8 +52,8 @@ export function LinkResultModal({ username, link, onClose }: Props) {
               </button>
             </div>
             <span className="link-warning">
-              Dieser Link wird nur jetzt angezeigt. Über ihn kann sich die Person ohne Passwort
-              anmelden -- an sie weitergeben, nicht öffentlich teilen.
+              {warning ??
+                "Dieser Link wird nur jetzt angezeigt. Über ihn kann sich die Person ohne Passwort anmelden -- an sie weitergeben, nicht öffentlich teilen."}
             </span>
           </label>
 

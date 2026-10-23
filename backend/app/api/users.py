@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 
 from app.api.deps import Repos, get_repos, require_admin
 from app.security import hash_password
+from app.store.group_links import GroupLink
 from app.store.users import Role, Status, User
 
 router = APIRouter(prefix="/api/users", tags=["users"])
@@ -96,6 +97,48 @@ def create_link_user(
     )
     token = repos.login_links.issue(user.id)
     return LinkUserResponse(user=user.model_copy(update={"has_login_link": True}), link_token=token)
+
+
+class CreateGroupLinkRequest(BaseModel):
+    label: str = Field(default="", max_length=80)
+    max_uses: int = Field(default=30, ge=1, le=500)
+    expires_in_days: int = Field(default=14, ge=1, le=90)
+
+
+class GroupLinkCreated(BaseModel):
+    link: GroupLink
+    # Raw token, visible only in this response.
+    token: str
+
+
+@router.post("/group-links", response_model=GroupLinkCreated, status_code=201)
+def create_group_link(
+    body: CreateGroupLinkRequest,
+    _: User = Depends(require_admin),
+    repos: Repos = Depends(get_repos),
+) -> GroupLinkCreated:
+    """A shared sign-up link: each visitor gets their own link-invited
+    account, up to `max_uses` of them before `expires_in_days` run out."""
+    link, token = repos.group_links.create(
+        label=body.label.strip(), max_uses=body.max_uses, expires_in_days=body.expires_in_days
+    )
+    return GroupLinkCreated(link=link, token=token)
+
+
+@router.get("/group-links", response_model=list[GroupLink])
+def list_group_links(
+    _: User = Depends(require_admin), repos: Repos = Depends(get_repos)
+) -> list[GroupLink]:
+    return repos.group_links.list_all()
+
+
+@router.post("/group-links/{link_id}/revoke", status_code=204)
+def revoke_group_link(
+    link_id: str, _: User = Depends(require_admin), repos: Repos = Depends(get_repos)
+) -> None:
+    """Stops the link creating new accounts; accounts it already made keep working."""
+    if not repos.group_links.revoke(link_id):
+        raise HTTPException(status_code=404, detail="group link not found")
 
 
 @router.post("/{user_id}/link", response_model=LinkUserResponse)

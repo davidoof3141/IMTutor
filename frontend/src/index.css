@@ -2967,3 +2967,17 @@ a:hover {
     align-items: flex-start;
   }
 }
+
+/* --- Admin: group sign-up links --- */
+
+.group-link-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin: 12px 0;
+}
+
+.group-link-form input[type="number"] {
+  width: 90px;
+}
