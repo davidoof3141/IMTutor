@@ -289,10 +289,10 @@ export function OnboardingForm({ onComplete, theme, onToggleTheme }: Props) {
             />
             <div className="onboarding-field">
               <div>
-                <div className="field-label">Lerntyp nach Vester</div>
+                <div className="field-label">Lerntyp</div>
                 <div className="field-description">
                   Vorliebe, keine Lerneinstellung: wie du Neues am liebsten aufnimmst.
-                  <InfoTip text="Frederic Vester unterscheidet Lerntypen nach dem Zugang, über den man Neues am liebsten aufnimmt. Das Modell ist verbreitet, ein Nutzen für den Lernerfolg ist aber nicht belegt — die Angabe ändert nur die Darbietung." />
+                  <InfoTip text="Manche lernen lieber mit Bildern, andere durch Zuhören, Gespräche oder Ausprobieren. Der Tutor erklärt entsprechend. Ein besserer Lernerfolg ist dadurch nicht belegt." />
                 </div>
               </div>
               <div className="option-group" role="radiogroup" aria-label="Lerntyp nach Vester">

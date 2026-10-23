@@ -135,6 +135,38 @@ class ComparisonRepository:
         ).fetchall()
         return [dict(row) for row in rows]
 
+    def learner_preference_counts(self) -> dict[str, int]:
+        """Per-learner view of the same decisions: how many learners picked
+        the personalized answer more often than the generic one, the reverse,
+        or equally often (a tie), over their decided comparisons."""
+        row = self._conn.execute(
+            """
+            WITH per_learner AS (
+                SELECT
+                    learner_id,
+                    COUNT(*) FILTER (
+                        WHERE (CASE WHEN chosen_variant = 'a' THEN variant_a_kind
+                                    ELSE variant_b_kind END) = 'personalized'
+                    ) AS personalized,
+                    COUNT(*) FILTER (
+                        WHERE (CASE WHEN chosen_variant = 'a' THEN variant_a_kind
+                                    ELSE variant_b_kind END) = 'generic'
+                    ) AS generic
+                FROM answer_comparisons
+                WHERE decided_at IS NOT NULL
+                GROUP BY learner_id
+            )
+            SELECT
+                COUNT(*) AS learners,
+                COUNT(*) FILTER (WHERE personalized > generic) AS personalized_more,
+                COUNT(*) FILTER (WHERE generic > personalized) AS generic_more,
+                COUNT(*) FILTER (WHERE personalized = generic) AS tied
+            FROM per_learner
+            """
+        ).fetchone()
+        assert row is not None
+        return dict(row)
+
     def reason_counts(self) -> list[dict[str, Any]]:
         """How often each reason tag was picked (a decided turn can carry
         more than one), across every decided comparison."""

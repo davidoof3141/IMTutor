@@ -70,7 +70,7 @@ export function AdminStats() {
       </div>
 
       <div className="stat-block">
-        <h3>Personalisiert vs. generisch bevorzugt</h3>
+        <h3>Personalisiert vs. generisch bevorzugt (pro Antwort)</h3>
         {decidedTotal === 0 ? (
           <p className="stat-empty">Noch keine Vergleiche entschieden.</p>
         ) : (
@@ -79,6 +79,10 @@ export function AdminStats() {
               <div className="stat-split-seg is-personalized" style={{ width: `${personalizedPct}%` }} />
               <div className="stat-split-seg is-generic" style={{ width: `${100 - personalizedPct}%` }} />
             </div>
+            <p>
+              Von {decidedTotal} entschiedenen Antworten gingen <strong>{personalizedPct}%</strong>{" "}
+              an die personalisierte Variante.
+            </p>
             <div className="stat-split-legend">
               <span className="stat-legend-item is-personalized">
                 {KIND_LABEL.personalized} — {personalized} ({personalizedPct}%)
@@ -88,6 +92,21 @@ export function AdminStats() {
               </span>
             </div>
           </>
+        )}
+      </div>
+
+      <div className="stat-block">
+        <h3>Personalisiert vs. generisch bevorzugt (pro Nutzer:in)</h3>
+        {stats.learners_decided === 0 ? (
+          <p className="stat-empty">Noch keine Vergleiche entschieden.</p>
+        ) : (
+          <p>
+            Von {stats.learners_decided} Lernenden haben{" "}
+            <strong>{stats.learners_personalized_more}</strong> die personalisierte Antwort
+            häufiger gewählt als die generische, {stats.learners_generic_more} die generische
+            häufiger
+            {stats.learners_tied > 0 ? `, ${stats.learners_tied} gleich oft` : ""}.
+          </p>
         )}
       </div>
 

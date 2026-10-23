@@ -394,7 +394,11 @@ function App() {
               </button>
             ) : (
               <span data-tour="mode-toggle">
-                <ModeToggle mode={studyMode.mode} onChange={handleModeChange} />
+                <ModeToggle
+                  mode={studyMode.mode}
+                  onChange={handleModeChange}
+                  disabledModes={dualMode ? ["exploration"] : []}
+                />
               </span>
             )}
           </div>
@@ -433,6 +437,13 @@ function App() {
           </div>
         </div>
       </header>
+
+      {dualMode && (
+        <div className="demo-banner" role="note">
+          <strong>Demo-Showcase:</strong> Du nutzt eine Testversion des ITM Tutors mit
+          eingeschränktem Zugang – nicht alle Kapitel und Funktionen sind freigeschaltet.
+        </div>
+      )}
 
       {inSettings && (
         <SettingsView chatModel={chatModel} onChatModelChange={setChatModel} currentUserId={auth.user.id} />
@@ -487,10 +498,8 @@ function App() {
           )}
           {selKey !== null && summaryOpen && currentDiagnostic?.result && (
             <DiagnosticSummary
-              learnerId={learnerId}
               title={focusLabel ?? "Dieses Kapitel"}
               result={currentDiagnostic.result}
-              onResultChange={(result) => handleDiagnosticResult(selKey, result)}
               onContinue={() => setSummaryFor(null)}
             />
           )}

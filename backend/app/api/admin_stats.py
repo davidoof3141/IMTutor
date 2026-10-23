@@ -27,6 +27,10 @@ class AdminStatsResponse(BaseModel):
     comparisons_decided: int
     comparisons_pending: int
     preference_by_kind: list[KindPreferenceCount]
+    learners_decided: int
+    learners_personalized_more: int
+    learners_generic_more: int
+    learners_tied: int
     reason_counts: list[ReasonCount]
     override_changes_total: int
     override_changes_by_field: list[OverrideFieldCount]
@@ -42,12 +46,17 @@ def get_admin_stats(
     learners gave, and which scrutability-interface parameters get edited
     most."""
     decided, pending = repos.comparisons.decided_and_pending_counts()
+    per_learner = repos.comparisons.learner_preference_counts()
     return AdminStatsResponse(
         comparisons_decided=decided,
         comparisons_pending=pending,
         preference_by_kind=[
             KindPreferenceCount(**row) for row in repos.comparisons.kind_preference_counts()
         ],
+        learners_decided=per_learner["learners"],
+        learners_personalized_more=per_learner["personalized_more"],
+        learners_generic_more=per_learner["generic_more"],
+        learners_tied=per_learner["tied"],
         reason_counts=[ReasonCount(**row) for row in repos.comparisons.reason_counts()],
         override_changes_total=repos.override_changes.total(),
         override_changes_by_field=[

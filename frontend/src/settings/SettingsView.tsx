@@ -8,6 +8,7 @@ import {
   setUserStatus,
 } from "../api/client";
 import type { LinkUserResponse, User, UserRole, UserStatus } from "../types";
+import { AdminDiagnosticResults } from "./AdminDiagnosticResults";
 import { AdminStats } from "./AdminStats";
 import { CHAT_MODELS, CHAT_MODEL_GROUPS } from "./chatModel";
 import { CreateLinkUserModal } from "./CreateLinkUserModal";
@@ -132,6 +133,15 @@ export function SettingsView({ chatModel, onChatModelChange, currentUserId }: Pr
             Scrutability-Interface selbst angepasst haben.
           </p>
           <AdminStats />
+        </section>
+
+        <section className="settings-card">
+          <h2>Quiz vs. Selbsteinschätzung</h2>
+          <p className="settings-card-desc">
+            Wie Lernende ihr Vorwissen im Onboarding eingeschätzt haben und wie sie im
+            Kapitel-Quiz tatsächlich abgeschnitten haben.
+          </p>
+          <AdminDiagnosticResults />
         </section>
 
         <section className="settings-card">

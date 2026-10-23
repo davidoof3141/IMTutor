@@ -4,6 +4,7 @@ interface Props {
   mode: StudyModeName;
   onChange: (mode: StudyModeName) => void;
   disabled?: boolean;
+  disabledModes?: StudyModeName[];
 }
 
 const MODES: { value: StudyModeName; label: string }[] = [
@@ -11,7 +12,7 @@ const MODES: { value: StudyModeName; label: string }[] = [
   { value: "training", label: "Lernplan" },
 ];
 
-export function ModeToggle({ mode, onChange, disabled }: Props) {
+export function ModeToggle({ mode, onChange, disabled, disabledModes = [] }: Props) {
   return (
     <div className="segmented" role="tablist" aria-label="Lernmodus">
       {MODES.map((m) => (
@@ -21,7 +22,7 @@ export function ModeToggle({ mode, onChange, disabled }: Props) {
           role="tab"
           aria-selected={mode === m.value}
           className={"segmented-option" + (mode === m.value ? " active" : "")}
-          disabled={disabled}
+          disabled={disabled || disabledModes.includes(m.value)}
           onClick={() => onChange(m.value)}
         >
           {m.label}

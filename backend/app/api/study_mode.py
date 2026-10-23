@@ -36,7 +36,14 @@ def get_mode(
     user: User = Depends(get_current_user),
 ) -> StudyModeState:
     authorize_learner(learner_id, user, repos)
-    return repos.study_mode.get(learner_id)
+    current = repos.study_mode.get(learner_id)
+    if user.has_login_link and current.mode == "exploration":
+        # Exploration is disabled for these accounts; move any that were
+        # saved in it before the restriction existed onto the Lernplan.
+        current = repos.study_mode.set(
+            learner_id, current.model_copy(update={"mode": "training"})
+        )
+    return current
 
 
 @router.put("/{learner_id}", response_model=StudyModeState)
@@ -50,6 +57,8 @@ def set_mode(
     authorize_learner(learner_id, user, repos)
 
     if user.has_login_link:
+        if body.mode == "exploration":
+            raise HTTPException(status_code=403, detail="exploration is disabled for your account")
         if body.chapter_number is not None and body.chapter_number != LINK_USER_ALLOWED_CHAPTER:
             raise HTTPException(status_code=403, detail="this chapter is locked for your account")
         if body.section_number is not None and body.section_number not in LINK_USER_ALLOWED_SECTIONS:

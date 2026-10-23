@@ -189,6 +189,16 @@ a:hover {
 
 /* --- Header --- */
 
+.demo-banner {
+  flex: none;
+  padding: 8px 24px;
+  font-size: 13px;
+  text-align: center;
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  border-bottom: 1px solid var(--border);
+}
+
 .app-header {
   flex: none;
   background: var(--surface);
@@ -840,6 +850,7 @@ a:hover {
   font-family: var(--mono);
   letter-spacing: 0.03em;
   color: var(--text-faint);
+  text-align: center;
   margin: -2px 0 10px;
 }
 
@@ -852,16 +863,18 @@ a:hover {
   overflow-y: auto;
   margin-bottom: 12px;
   /* Extend into .chat-main's right padding so the scrollbar sits flush against
-     the panel edge instead of floating 56px in from it; padding-right restores
-     the original inset for the message bubbles themselves. */
+     the panel edge instead of floating 56px in from it. The inline padding
+     centres the bubbles in the same 800px column as the input row. */
+  --chat-gutter: max(0px, calc((100% - 800px) / 2));
   margin-right: -56px;
-  padding-right: 56px;
+  padding-left: var(--chat-gutter);
+  padding-right: calc(var(--chat-gutter) + 56px);
 }
 
 @media (max-width: 960px) {
   .chat-messages {
     margin-right: -20px;
-    padding-right: 20px;
+    padding-right: calc(var(--chat-gutter) + 20px);
   }
 }
 

@@ -47,9 +47,24 @@ export interface AdminStats {
   comparisons_decided: number;
   comparisons_pending: number;
   preference_by_kind: KindPreferenceCount[];
+  learners_decided: number;
+  learners_personalized_more: number;
+  learners_generic_more: number;
+  learners_tied: number;
   reason_counts: ReasonCount[];
   override_changes_total: number;
   override_changes_by_field: OverrideFieldCount[];
+}
+
+export interface DiagnosticResultRow {
+  username: string;
+  chapter_id: string;
+  chapter_title: string;
+  correct_count: number;
+  item_count: number | null;
+  self_estimate: PriorKnowledge;
+  quiz_level: PriorKnowledge;
+  taken_at: string;
 }
 
 // Self-reported general IT-management experience. At onboarding this is only

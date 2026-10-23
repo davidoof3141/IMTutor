@@ -85,3 +85,16 @@ class ChapterDiagnosticRepository:
             (json.dumps(override), learner_id, diagnostic_key),
         )
         self._conn.commit()
+
+    def list_with_usernames(self) -> list[dict]:
+        """Every stored result with the owning username, for the admin view."""
+        return self._conn.execute(
+            """
+            SELECT u.username, d.diagnostic_key, d.correct_count,
+                   d.experience_seed, d.prior_knowledge, d.created_at
+            FROM chapter_diagnostics d
+            JOIN profiles p ON p.learner_id = d.learner_id
+            JOIN users u ON u.id = p.user_id
+            ORDER BY u.username, d.created_at
+            """
+        ).fetchall()

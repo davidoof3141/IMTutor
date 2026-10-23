@@ -547,3 +547,21 @@ def test_stale_endpoint_lists_drifted_chapters_but_still_serves_them(
 
 def test_stale_endpoint_is_admin_only(client: TestClient) -> None:
     assert client.get("/api/admin/diagnostics-stale").status_code == 403
+
+
+def test_admin_results_pair_self_estimate_with_quiz_level(with_diagnostic: TestClient) -> None:
+    c = with_diagnostic
+    learner_id = _onboard(c, seed="none")
+    _train(c, learner_id)
+    c.post(f"/api/diagnostic/{learner_id}", json={"answers": RIGHT})
+
+    assert c.get("/api/admin/diagnostic-results").status_code == 403
+
+    admin = {"Authorization": f"Bearer {login(c, **SUPERUSER)}"}
+    rows = c.get("/api/admin/diagnostic-results", headers=admin).json()["results"]
+    assert len(rows) == 1
+    row = rows[0]
+    assert (row["username"], row["chapter_id"], row["correct_count"], row["item_count"]) == (
+        "learner", "1", 4, 4,
+    )
+    assert (row["self_estimate"], row["quiz_level"]) == ("none", "moderate")

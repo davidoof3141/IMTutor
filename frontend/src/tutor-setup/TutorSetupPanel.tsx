@@ -39,7 +39,7 @@ const PROFILE_FIELDS: { key: keyof ConfigResponse["profile"]; label: string }[] 
 const PREFERENCE_FIELDS: { key: keyof ConfigResponse["profile"]; label: string }[] = [
   { key: "simplified_language", label: "Einfache Sprache" },
   { key: "presentation_style", label: "Darstellung" },
-  { key: "learner_type", label: "Lerntyp (nach Vester)" },
+  { key: "learner_type", label: "Lerntyp" },
 ];
 
 const PROFILE_WORDS: Record<string, string> = {

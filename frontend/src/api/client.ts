@@ -15,6 +15,7 @@ import type {
   PriorKnowledge,
   RetentionHorizon,
   PresentationStyle,
+  DiagnosticResultRow,
   LearnerType,
   DiagnosticResult,
   DiagnosticStatus,
@@ -157,6 +158,10 @@ export function listUsers(): Promise<User[]> {
 
 export function getAdminStats(): Promise<AdminStats> {
   return request("/api/admin/stats");
+}
+
+export function getDiagnosticResults(): Promise<{ results: DiagnosticResultRow[] }> {
+  return request("/api/admin/diagnostic-results");
 }
 
 export function createUser(
