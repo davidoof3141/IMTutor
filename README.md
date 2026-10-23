@@ -133,7 +133,7 @@ From `backend/.env.example`:
 | Variable | Purpose |
 |---|---|
 | `OPENROUTER_API_KEY` | Auth for both chat completions and embeddings |
-| `OPENROUTER_MODEL` | Chat model, e.g. `openai/gpt-4o-mini` |
+| `OPENROUTER_MODEL` | Chat model, e.g. `openai/gpt-5-mini` |
 | `OPENROUTER_EMBEDDING_MODEL` | Embedding model, e.g. `openai/text-embedding-3-small` (must match `book_chunks.embedding`'s dimensions in `app/store/db.py`) |
 | `DATABASE_URL` | Postgres connection string (Neon in production, `db` service locally) |
 | `FRONTEND_ORIGIN` | Comma-separated allowed CORS origins |

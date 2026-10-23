@@ -6,7 +6,7 @@ from openai import OpenAI
 TUTORING_TEMPERATURE = 0.7
 MANIPULATION_CHECK_TEMPERATURE = 0.0
 
-DEFAULT_MODEL = os.environ.get("OPENROUTER_MODEL", "openai/gpt-4o-mini")
+DEFAULT_MODEL = os.environ.get("OPENROUTER_MODEL", "openai/gpt-5-mini")
 
 
 class TutorResponse:
