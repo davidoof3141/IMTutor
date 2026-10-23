@@ -80,10 +80,8 @@ export function DiagnosticQuiz({ learnerId, title, items, onSubmitted }: QuizPro
 }
 
 interface SummaryProps {
-  learnerId: string;
   title: string;
   result: DiagnosticResult;
-  onResultChange: (result: DiagnosticResult) => void;
   onContinue: () => void;
 }
 

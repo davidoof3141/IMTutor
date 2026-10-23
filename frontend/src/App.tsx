@@ -1,11 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import {
   ApiError,
-  abandonLesson,
-  advanceLesson,
   consumeLoginLinkFromUrl,
   consumeGroupJoinFromUrl,
-  createLesson,
   getComparisonProgress,
   getToken,
   hasPendingGroupJoin,
@@ -115,8 +112,6 @@ function App() {
   // changes, so a lesson action's own openConversation() call (below) is
   // what refreshes this after create/advance/abandon.
   const [lesson, setLesson] = useState<LessonResponse | null>(null);
-  const [lessonBusy, setLessonBusy] = useState(false);
-  const [lessonError, setLessonError] = useState<string | null>(null);
   const [scheduleCollapsed, setScheduleCollapsed] = useState<boolean>(() => {
     try {
       return localStorage.getItem("itm-schedule-collapsed") === "1";
@@ -241,58 +236,14 @@ function App() {
       .catch((err) => {
         if (cancelled) return;
         // 404 just means this thread has no lesson -- an ordinary chat, not an error.
-        if (err instanceof ApiError && err.status === 404) {
-          setLesson(null);
-        } else {
-          setLessonError(err instanceof ApiError ? err.message : "Der Server ist nicht erreichbar.");
-        }
+        // Other failures leave the lesson as it was; lessons aren't started from
+        // the UI any more, so there is no panel to show an error in.
+        if (err instanceof ApiError && err.status === 404) setLesson(null);
       });
     return () => {
       cancelled = true;
     };
   }, [activeConversationId, chatEpoch]);
-
-  async function handleCreateLesson() {
-    if (!learnerId) return;
-    setLessonBusy(true);
-    setLessonError(null);
-    try {
-      const created = await createLesson(learnerId);
-      openConversation(created.plan.conversation_id);
-    } catch (err) {
-      setLessonError(err instanceof ApiError ? err.message : "Der Server ist nicht erreichbar.");
-    } finally {
-      setLessonBusy(false);
-    }
-  }
-
-  async function handleAdvanceLesson() {
-    if (activeConversationId === null) return;
-    setLessonBusy(true);
-    setLessonError(null);
-    try {
-      await advanceLesson(activeConversationId);
-      openConversation(activeConversationId);
-    } catch (err) {
-      setLessonError(err instanceof ApiError ? err.message : "Der Server ist nicht erreichbar.");
-    } finally {
-      setLessonBusy(false);
-    }
-  }
-
-  async function handleAbandonLesson() {
-    if (activeConversationId === null) return;
-    setLessonBusy(true);
-    setLessonError(null);
-    try {
-      await abandonLesson(activeConversationId);
-      openConversation(activeConversationId);
-    } catch (err) {
-      setLessonError(err instanceof ApiError ? err.message : "Der Server ist nicht erreichbar.");
-    } finally {
-      setLessonBusy(false);
-    }
-  }
 
   useEffect(() => {
     if (!learnerId) return;
