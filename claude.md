@@ -106,7 +106,7 @@ Which input drives which parameter (each parameter has exactly one driver):
 | Input | Parameter | Rule |
 |-------|-----------|------|
 | `prior_knowledge` | `explanation_depth`, `example_density` | none/low -> 4/4, moderate -> 3/3, high -> 2/2 |
-| `prior_knowledge` | `concreteness` (1-5) | none/low -> 5, moderate -> 3, high -> 1. This is the START value; step-position fading is planned as a planner change (TODO in the ruleset), not implemented. |
+| `prior_knowledge` | `concreteness` (1-5) | none/low -> 5, moderate -> 3, high -> 2. This is the START value; the planner (v2) fades it by step position within each section down to a floor of 2 (see "Concreteness fading"). |
 | `prior_knowledge` | `register` | none/low -> `polite`, moderate/high -> `direct` |
 | `learning_goal` | `assessment_frequency` | certification -> every_topic, applied -> every_second_topic, orientation -> on_request |
 | `retention_horizon` | `review_schedule` (gap_days) | within_2_weeks -> 2, 1_to_3_months -> 7, long_term -> 14 |
@@ -276,7 +276,7 @@ backend/
   scripts/        build_book_index.py extract_book_images.py
   content/        diagnostics/scoring_table.yaml, diagnostics/<course>/<chapter>.yaml
                   (generated offline, reviewed, committed)
-  rules/          ruleset.v1.yaml clauses.v1.yaml planner.v1.yaml step_templates.v1.yaml
+  rules/          ruleset.v1.yaml clauses.v1.yaml planner.v2.yaml step_templates.v2.yaml
   tests/
 frontend/
   src/            onboarding, tutor chat, scrutability panel, mode toggle, curriculum,
@@ -496,7 +496,7 @@ LLM import (`tests/test_purity.py` extends its import check to this file).
 The plan does **not** change based on how the learner performs: no
 remediation, no skipping, no difficulty adjustment — checkpoint answers are
 ordinary chat turns, logged and otherwise ignored (invariant 6 extended to
-this layer). The numbers a plan is built from live in `rules/planner.v1.yaml`
+this layer). The numbers a plan is built from live in `rules/planner.v2.yaml`
 (same reasoning as invariant 7): explain/example beats per section per
 `explanation_depth`/`example_density`, and a checkpoint placement pattern per
 `assessment_frequency`. What those numbers *mean* — how they turn into a step
@@ -514,10 +514,20 @@ full plan: the planner's steps plus that identity/timestamp) lives in
 `step_index -> "parameter=value"` dict alongside the steps (`recap` always
 attributes to `"always"`).
 
-**Step templates** (`rules/step_templates.v1.yaml`, `app/core/step_templates.py`)
+**Concreteness fading** (planner v2): `ControlVector.concreteness` is the
+*start* level. Within each section the k-th explain/example step (k = 0, 1, ...)
+carries `concreteness = max(floor, start - k * step)` (`concreteness_floor: 2`,
+`concreteness_step: 1` in `planner.v2.yaml`; a start already at or below the
+floor is kept); the fade restarts per section; checkpoint and recap steps sit
+at the floor. It is stored per step (`LessonStep.concreteness`,
+`lesson_steps.concreteness`; NULL on pre-v2 plans = constant vector level) and
+depends only on plan position, never on the learner's answers (invariant 6).
+v1 plans keep their v1 templates/tables.
+
+**Step templates** (`rules/step_templates.v2.yaml`, `app/core/step_templates.py`)
 are one fixed instruction sentence per `StepKind`, same totality-at-load-time
 rule as the clause catalogue. `format_step` substitutes only `section_ref`,
-`page_start`, `page_end` — no other interpolation, same spirit as
+`page_start`, `page_end` and `concreteness_clause` (the catalogue sentence for the step's own level) — no other interpolation, same spirit as
 `app/rag/toc.py::format_focus`. A step's turn passes this, plus the existing
 training-mode focus message, via `book_context` — never folded into
 `core/assembler.py`'s output, so the scrutability panel keeps showing exactly

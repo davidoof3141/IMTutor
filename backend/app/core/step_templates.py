@@ -8,6 +8,8 @@ from pathlib import Path
 import yaml
 from pydantic import BaseModel, ConfigDict
 
+from app.core.clauses import ClauseCatalogue
+from app.core.constants import CONCRETENESS
 from app.core.planner import STEP_KINDS, LessonStep, StepKind
 
 
@@ -33,12 +35,15 @@ def _check_totality(templates: StepTemplates) -> None:
         )
 
 
-def format_step(step: LessonStep, templates: StepTemplates) -> str:
+def format_step(step: LessonStep, templates: StepTemplates, catalogue: ClauseCatalogue) -> str:
     """Fixed template plus substitution of `section_ref`/`page_start`/
-    `page_end` only -- no other interpolation, no free text. Same spirit as
-    `app.rag.toc.format_focus`."""
+    `page_end` and the catalogue's fixed clause for the step's own
+    concreteness level -- no other interpolation, no free text. Same spirit
+    as `app.rag.toc.format_focus`. (v1 templates have no concreteness
+    placeholder; the extra argument is then simply unused.)"""
     return templates.templates[step.kind].format(
         section_ref=step.section_ref,
         page_start=step.page_start,
         page_end=step.page_end,
+        concreteness_clause=catalogue.clauses[CONCRETENESS][step.concreteness],
     )

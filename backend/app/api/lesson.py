@@ -106,7 +106,7 @@ def _run_step(
         raise HTTPException(
             status_code=500, detail=f"unknown planner version: {plan.planner_version}"
         )
-    instruction = format_step(step, state.step_templates[plan.planner_version])
+    instruction = format_step(step, state.step_templates[plan.planner_version], catalogue)
     book_context = f"{focus}\n\n{instruction}"
 
     history = [

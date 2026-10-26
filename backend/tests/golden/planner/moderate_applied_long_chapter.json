@@ -32,6 +32,7 @@
   },
   "steps": [
     {
+      "concreteness": 3,
       "index": 0,
       "kind": "explain",
       "page_end": 141,
@@ -39,6 +40,7 @@
       "section_ref": "5.1"
     },
     {
+      "concreteness": 2,
       "index": 1,
       "kind": "explain",
       "page_end": 141,
@@ -46,6 +48,7 @@
       "section_ref": "5.1"
     },
     {
+      "concreteness": 2,
       "index": 2,
       "kind": "example",
       "page_end": 141,
@@ -53,6 +56,7 @@
       "section_ref": "5.1"
     },
     {
+      "concreteness": 3,
       "index": 3,
       "kind": "explain",
       "page_end": 150,
@@ -60,6 +64,7 @@
       "section_ref": "5.2"
     },
     {
+      "concreteness": 2,
       "index": 4,
       "kind": "explain",
       "page_end": 150,
@@ -67,6 +72,7 @@
       "section_ref": "5.2"
     },
     {
+      "concreteness": 2,
       "index": 5,
       "kind": "example",
       "page_end": 150,
@@ -74,6 +80,7 @@
       "section_ref": "5.2"
     },
     {
+      "concreteness": 2,
       "index": 6,
       "kind": "checkpoint",
       "page_end": 150,
@@ -81,6 +88,7 @@
       "section_ref": "5.2"
     },
     {
+      "concreteness": 3,
       "index": 7,
       "kind": "explain",
       "page_end": 153,
@@ -88,6 +96,7 @@
       "section_ref": "5.3"
     },
     {
+      "concreteness": 2,
       "index": 8,
       "kind": "explain",
       "page_end": 153,
@@ -95,6 +104,7 @@
       "section_ref": "5.3"
     },
     {
+      "concreteness": 2,
       "index": 9,
       "kind": "example",
       "page_end": 153,
@@ -102,6 +112,7 @@
       "section_ref": "5.3"
     },
     {
+      "concreteness": 3,
       "index": 10,
       "kind": "explain",
       "page_end": 159,
@@ -109,6 +120,7 @@
       "section_ref": "5.4"
     },
     {
+      "concreteness": 2,
       "index": 11,
       "kind": "explain",
       "page_end": 159,
@@ -116,6 +128,7 @@
       "section_ref": "5.4"
     },
     {
+      "concreteness": 2,
       "index": 12,
       "kind": "example",
       "page_end": 159,
@@ -123,6 +136,7 @@
       "section_ref": "5.4"
     },
     {
+      "concreteness": 2,
       "index": 13,
       "kind": "checkpoint",
       "page_end": 159,
@@ -130,6 +144,7 @@
       "section_ref": "5.4"
     },
     {
+      "concreteness": 3,
       "index": 14,
       "kind": "explain",
       "page_end": 167,
@@ -137,6 +152,7 @@
       "section_ref": "5.5"
     },
     {
+      "concreteness": 2,
       "index": 15,
       "kind": "explain",
       "page_end": 167,
@@ -144,6 +160,7 @@
       "section_ref": "5.5"
     },
     {
+      "concreteness": 2,
       "index": 16,
       "kind": "example",
       "page_end": 167,
@@ -151,6 +168,7 @@
       "section_ref": "5.5"
     },
     {
+      "concreteness": 3,
       "index": 17,
       "kind": "explain",
       "page_end": 176,
@@ -158,6 +176,7 @@
       "section_ref": "5.6"
     },
     {
+      "concreteness": 2,
       "index": 18,
       "kind": "explain",
       "page_end": 176,
@@ -165,6 +184,7 @@
       "section_ref": "5.6"
     },
     {
+      "concreteness": 2,
       "index": 19,
       "kind": "example",
       "page_end": 176,
@@ -172,6 +192,7 @@
       "section_ref": "5.6"
     },
     {
+      "concreteness": 2,
       "index": 20,
       "kind": "checkpoint",
       "page_end": 176,
@@ -179,6 +200,7 @@
       "section_ref": "5.6"
     },
     {
+      "concreteness": 3,
       "index": 21,
       "kind": "explain",
       "page_end": 183,
@@ -186,6 +208,7 @@
       "section_ref": "5.7"
     },
     {
+      "concreteness": 2,
       "index": 22,
       "kind": "explain",
       "page_end": 183,
@@ -193,6 +216,7 @@
       "section_ref": "5.7"
     },
     {
+      "concreteness": 2,
       "index": 23,
       "kind": "example",
       "page_end": 183,
@@ -200,6 +224,7 @@
       "section_ref": "5.7"
     },
     {
+      "concreteness": 3,
       "index": 24,
       "kind": "explain",
       "page_end": 192,
@@ -207,6 +232,7 @@
       "section_ref": "5.8"
     },
     {
+      "concreteness": 2,
       "index": 25,
       "kind": "explain",
       "page_end": 192,
@@ -214,6 +240,7 @@
       "section_ref": "5.8"
     },
     {
+      "concreteness": 2,
       "index": 26,
       "kind": "example",
       "page_end": 192,
@@ -221,6 +248,7 @@
       "section_ref": "5.8"
     },
     {
+      "concreteness": 2,
       "index": 27,
       "kind": "checkpoint",
       "page_end": 192,
@@ -228,6 +256,7 @@
       "section_ref": "5.8"
     },
     {
+      "concreteness": 2,
       "index": 28,
       "kind": "recap",
       "page_end": 192,

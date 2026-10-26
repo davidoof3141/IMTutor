@@ -141,7 +141,7 @@ def test_no_rule_lets_retention_touch_assessment_or_goal_touch_review(ruleset: R
 
 @pytest.mark.parametrize(
     "level, concreteness",
-    [("none", 5), ("low", 5), ("moderate", 3), ("high", 1)],
+    [("none", 5), ("low", 5), ("moderate", 3), ("high", 2)],
 )
 def test_prior_knowledge_sets_concreteness(
     ruleset: RuleSet, level: str, concreteness: int
@@ -164,7 +164,7 @@ def test_prior_knowledge_sets_register(ruleset: RuleSet, level: str, register: s
 def test_chapter_level_drives_concreteness_and_register_not_the_seed(ruleset: RuleSet) -> None:
     profile = make_profile(prior_knowledge_seed="none")
     vector, _ = derive(profile, ruleset, "high")
-    assert (vector.concreteness, vector.register) == (1, "direct")
+    assert (vector.concreteness, vector.register) == (2, "direct")
 
 
 def test_review_schedule_has_a_fixed_prompt_clause(

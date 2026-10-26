@@ -92,8 +92,9 @@ class LessonRepository:
             self._conn.execute(
                 """
                 INSERT INTO lesson_steps
-                    (lesson_id, index, kind, section_ref, page_start, page_end, rationale)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    (lesson_id, index, kind, section_ref, page_start, page_end, rationale,
+                     concreteness)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
                     lesson_id,
@@ -103,6 +104,7 @@ class LessonRepository:
                     step.page_start,
                     step.page_end,
                     rationale[step.index],
+                    step.concreteness,
                 ),
             )
         self._conn.commit()
@@ -117,10 +119,11 @@ class LessonRepository:
 
     def _row_to_plan(self, row: dict) -> StoredLessonPlan:  # type: ignore[type-arg]
         steps_rows = self._conn.execute(
-            "SELECT index, kind, section_ref, page_start, page_end, rationale "
+            "SELECT index, kind, section_ref, page_start, page_end, rationale, concreteness "
             "FROM lesson_steps WHERE lesson_id = %s ORDER BY index",
             (row["lesson_id"],),
         ).fetchall()
+        vector_snapshot = ControlVector.model_validate(json.loads(row["vector_snapshot"]))
         steps = [
             LessonStep(
                 index=r["index"],
@@ -128,6 +131,12 @@ class LessonRepository:
                 section_ref=r["section_ref"],
                 page_start=r["page_start"],
                 page_end=r["page_end"],
+                # NULL = plan made before planner v2: constant concreteness.
+                concreteness=(
+                    r["concreteness"]
+                    if r["concreteness"] is not None
+                    else vector_snapshot.concreteness
+                ),
             )
             for r in steps_rows
         ]
@@ -140,7 +149,7 @@ class LessonRepository:
             planner_version=row["planner_version"],
             chapter_ref=row["chapter_ref"],
             section_ref=row["section_ref"],
-            vector_snapshot=ControlVector.model_validate(json.loads(row["vector_snapshot"])),
+            vector_snapshot=vector_snapshot,
             steps=steps,
             rationale=rationale,
             current_step=row["current_step"],

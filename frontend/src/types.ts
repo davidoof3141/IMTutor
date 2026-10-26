@@ -229,6 +229,7 @@ export interface LessonStep {
   section_ref: string;
   page_start: number;
   page_end: number;
+  concreteness: number;
 }
 
 export interface LessonPlan {

@@ -121,7 +121,7 @@ def test_recap_section_ref_is_the_section_for_a_single_section_lesson(
 
 
 def test_unknown_chapter_raises() -> None:
-    table = load_planner_table(RULES_DIR / "planner.v1.yaml")
+    table = load_planner_table(RULES_DIR / "planner.v2.yaml")
     with pytest.raises(ValueError, match="unknown chapter"):
         plan_lesson(_vector(), CurriculumSelection(chapter_number="404"), [], table)
 

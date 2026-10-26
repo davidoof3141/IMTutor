@@ -8,6 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.core.clauses import ClauseCatalogue, load_catalogue
+from app.core.constants import CURRENT_PLANNER_VERSION
 from app.core.planner import PlannerTable, load_planner_table
 from app.core.profile import (
     Industry,
@@ -191,12 +192,12 @@ def catalogue() -> ClauseCatalogue:
 
 @pytest.fixture(scope="session")
 def planner_table() -> PlannerTable:
-    return load_planner_table(RULES_DIR / "planner.v1.yaml")
+    return load_planner_table(RULES_DIR / f"planner.{CURRENT_PLANNER_VERSION}.yaml")
 
 
 @pytest.fixture(scope="session")
 def step_templates() -> StepTemplates:
-    return load_step_templates(RULES_DIR / "step_templates.v1.yaml")
+    return load_step_templates(RULES_DIR / f"step_templates.{CURRENT_PLANNER_VERSION}.yaml")
 
 
 @pytest.fixture(scope="session")

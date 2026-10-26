@@ -19,8 +19,8 @@ defaults:
 
 rules:
   # prior_knowledge -> explanation_depth, example_density, concreteness, register
-  # TODO: step-position-based fading of concreteness (planner change) is
-  # intended on top of the concreteness value set here, which is the START value.
+  # The concreteness value set here is the START value; the planner (v2)
+  # fades it by step position within each section (rules/planner.v2.yaml).
   - id: pk_low
     priority: 10
     when: { prior_knowledge: [none, low] }
@@ -36,7 +36,7 @@ rules:
   - id: pk_high
     priority: 10
     when: { prior_knowledge: high }
-    set: { explanation_depth: 2, example_density: 2, concreteness: 1, register: direct }
+    set: { explanation_depth: 2, example_density: 2, concreteness: 2, register: direct }
 
   # assessment_frequency is governed by learning_goal ONLY.
   - id: goal_certification

@@ -6,6 +6,7 @@
   },
   "steps": [
     {
+      "concreteness": 2,
       "index": 0,
       "kind": "explain",
       "page_end": 28,
@@ -13,6 +14,7 @@
       "section_ref": "1.1"
     },
     {
+      "concreteness": 2,
       "index": 1,
       "kind": "example",
       "page_end": 28,
@@ -20,6 +22,7 @@
       "section_ref": "1.1"
     },
     {
+      "concreteness": 2,
       "index": 2,
       "kind": "recap",
       "page_end": 28,

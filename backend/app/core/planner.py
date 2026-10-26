@@ -17,7 +17,12 @@ from typing import Literal
 import yaml
 from pydantic import BaseModel, ConfigDict
 
-from app.core.constants import ASSESSMENT_FREQUENCY, EXAMPLE_DENSITY, EXPLANATION_DEPTH
+from app.core.constants import (
+    ASSESSMENT_FREQUENCY,
+    CONCRETENESS,
+    EXAMPLE_DENSITY,
+    EXPLANATION_DEPTH,
+)
 from app.core.vector import ADMISSIBLE_VALUES, ControlVector
 from app.rag.toc import Chapter, Section, find_chapter
 
@@ -35,6 +40,11 @@ class LessonStep(BaseModel):
     section_ref: str  # "4.2", or "4" when the step covers a whole chapter
     page_start: int
     page_end: int
+    # Concreteness level (1-5) this step is given at: the vector's starting
+    # level, faded by the step's position within its section (see
+    # plan_lesson). A fixed function of the plan position, never of the
+    # learner's answers.
+    concreteness: int
 
 
 class CurriculumSelection(BaseModel):
@@ -68,6 +78,12 @@ class PlannerTable(BaseModel):
     explain_per_section: dict[int, int]
     example_per_section: dict[int, int]
     assessment_pattern: dict[str, AssessmentPattern]
+    # Concreteness fading: within a section the k-th explain/example step
+    # (k = 0, 1, ...) is given at start - k * concreteness_step, but never
+    # below concreteness_floor. Checkpoint and recap steps use the floor.
+    # Defaults (floor 1, step 0) mean no fading: that is what v1 tables mean.
+    concreteness_floor: int = 1
+    concreteness_step: int = 0
 
 
 def load_planner_table(path: Path) -> PlannerTable:
@@ -77,6 +93,8 @@ def load_planner_table(path: Path) -> PlannerTable:
         explain_per_section=raw["explain_per_section"],
         example_per_section=raw["example_per_section"],
         assessment_pattern=raw["assessment_pattern"],
+        concreteness_floor=raw.get("concreteness_floor", 1),
+        concreteness_step=raw.get("concreteness_step", 0),
     )
     _check_table_totality(table)
     return table
@@ -95,6 +113,24 @@ def _check_table_totality(table: PlannerTable) -> None:
             missing.append(f"assessment_pattern[{value}]")
     if missing:
         raise ValueError(f"Planner table {table.version} is missing entries for: {missing}")
+    if table.concreteness_floor not in ADMISSIBLE_VALUES[CONCRETENESS]:
+        raise ValueError(
+            f"Planner table {table.version}: concreteness_floor must be one of "
+            f"{ADMISSIBLE_VALUES[CONCRETENESS]}, got {table.concreteness_floor}"
+        )
+    if table.concreteness_step < 0:
+        raise ValueError(
+            f"Planner table {table.version}: concreteness_step must be >= 0, "
+            f"got {table.concreteness_step}"
+        )
+
+
+def faded_concreteness(start: int, position: int, table: PlannerTable) -> int:
+    """Concreteness of the explain/example step at `position` (0-based) within
+    its section. Falls by `concreteness_step` per step down to the floor; a
+    start level already at or below the floor is kept as it is."""
+    floor = min(start, table.concreteness_floor)
+    return max(floor, start - position * table.concreteness_step)
 
 
 @dataclass(frozen=True)
@@ -151,7 +187,9 @@ def plan_lesson(
     steps: list[LessonStep] = []
     rationale: PlanRationale = {}
 
-    def add(kind: StepKind, ref: str, page_start: int, page_end: int, cause: str) -> None:
+    def add(
+        kind: StepKind, ref: str, page_start: int, page_end: int, cause: str, concreteness: int
+    ) -> None:
         index = len(steps)
         steps.append(
             LessonStep(
@@ -160,6 +198,7 @@ def plan_lesson(
                 section_ref=ref,
                 page_start=page_start,
                 page_end=page_end,
+                concreteness=concreteness,
             )
         )
         rationale[index] = cause
@@ -170,24 +209,36 @@ def plan_lesson(
     example_cause = f"example_density={vector.example_density}"
     checkpoint_cause = f"assessment_frequency={vector.assessment_frequency}"
 
+    start = vector.concreteness
+    # Checkpoints and the closing recap (the principle stated after the
+    # examples) are given at the fully faded level.
+    floor = min(start, table.concreteness_floor)
+
     for position, unit in enumerate(units, start=1):
+        # The fade restarts in every section: k counts this section's
+        # explain and example steps in order.
+        k = 0
         for _ in range(explain_count):
-            add("explain", unit.ref, unit.page_start, unit.page_end, explain_cause)
+            level = faded_concreteness(start, k, table)
+            add("explain", unit.ref, unit.page_start, unit.page_end, explain_cause, level)
+            k += 1
         for _ in range(example_count):
-            add("example", unit.ref, unit.page_start, unit.page_end, example_cause)
+            level = faded_concreteness(start, k, table)
+            add("example", unit.ref, unit.page_start, unit.page_end, example_cause, level)
+            k += 1
 
         if pattern == "each_section":
-            add("checkpoint", unit.ref, unit.page_start, unit.page_end, checkpoint_cause)
+            add("checkpoint", unit.ref, unit.page_start, unit.page_end, checkpoint_cause, floor)
         elif pattern == "every_second_section":
             if position % 2 == 0:
                 prev = units[position - 2]
-                add("checkpoint", unit.ref, prev.page_start, unit.page_end, checkpoint_cause)
+                add("checkpoint", unit.ref, prev.page_start, unit.page_end, checkpoint_cause, floor)
             elif position == len(units):
                 # odd section count -- one trailing checkpoint for the last, unpaired section
-                add("checkpoint", unit.ref, unit.page_start, unit.page_end, checkpoint_cause)
+                add("checkpoint", unit.ref, unit.page_start, unit.page_end, checkpoint_cause, floor)
         # pattern == "none": no checkpoint steps
 
     overall_ref = chapter.number if len(units) > 1 else units[0].ref
-    add("recap", overall_ref, units[0].page_start, units[-1].page_end, "always")
+    add("recap", overall_ref, units[0].page_start, units[-1].page_end, "always", floor)
 
     return steps, rationale

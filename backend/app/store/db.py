@@ -276,6 +276,10 @@ CREATE TABLE IF NOT EXISTS lesson_steps (
     PRIMARY KEY (lesson_id, index)
 );
 
+-- Per-step concreteness (planner v2 fading). NULL on plans made before v2:
+-- those steps use the plan's vector concreteness unchanged.
+ALTER TABLE lesson_steps ADD COLUMN IF NOT EXISTS concreteness INTEGER;
+
 CREATE EXTENSION IF NOT EXISTS vector;
 
 CREATE TABLE IF NOT EXISTS book_chunks (
