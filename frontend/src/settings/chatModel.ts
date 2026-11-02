@@ -92,7 +92,7 @@ export const CHAT_MODEL_GROUPS: ChatModelGroup[] = [
 export const CHAT_MODELS: ChatModelOption[] = CHAT_MODEL_GROUPS.flatMap((g) => g.models);
 
 const STORAGE_KEY = "itm-chat-model";
-export const DEFAULT_CHAT_MODEL = "anthropic/claude-sonnet-5";
+export const DEFAULT_CHAT_MODEL = "openai/gpt-5.1";
 
 function isKnown(id: string): boolean {
   return CHAT_MODELS.some((m) => m.id === id);
