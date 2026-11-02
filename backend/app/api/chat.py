@@ -22,7 +22,7 @@ from app.api.deps import (
     require_diagnostic_done,
     resolve_config,
 )
-from app.core.assembler import assemble
+from app.core.assembler import assemble, assemble_unconfigured
 from app.core.vector import ControlVector
 from app.llm.client import (
     DEFAULT_MODEL,
@@ -342,19 +342,20 @@ def compare(
     if repos.comparisons.count_for_learner(learner_id) >= MAX_LINK_USER_QUESTIONS:
         raise HTTPException(status_code=429, detail=QUOTA_EXHAUSTED_MESSAGE)
 
-    ruleset = state.rulesets[profile.ruleset_version]
     catalogue = state.catalogues[profile.ruleset_version]
     require_diagnostic_done(profile, state, repos)
     personalized_vector = resolve_config(profile, state, repos).effective
-    baseline_vector = ControlVector.model_validate(ruleset.defaults)
 
     variant_kinds: list[VariantKind] = ["personalized", "generic"]
     random.shuffle(variant_kinds)
     variant_a_kind, variant_b_kind = variant_kinds
-    vector_by_kind = {"personalized": personalized_vector, "generic": baseline_vector}
+    prompt_by_kind = {
+        "personalized": assemble(personalized_vector, catalogue, profile.preferences),
+        "generic": assemble_unconfigured(catalogue),
+    }
     prompts: dict[VariantLabel, str] = {
-        "a": assemble(vector_by_kind[variant_a_kind], catalogue, profile.preferences),
-        "b": assemble(vector_by_kind[variant_b_kind], catalogue, profile.preferences),
+        "a": prompt_by_kind[variant_a_kind],
+        "b": prompt_by_kind[variant_b_kind],
     }
 
     study_mode = repos.study_mode.get(learner_id)
@@ -371,7 +372,6 @@ def compare(
         learner_message=body.message,
         ruleset_version=profile.ruleset_version,
         personalized_vector=personalized_vector.model_dump(),
-        baseline_vector=baseline_vector.model_dump(),
         variant_a_kind=variant_a_kind,
         variant_b_kind=variant_b_kind,
         book_context=setup.book_context,
@@ -481,15 +481,17 @@ def choose_comparison(
     repos.attachments.link_to_message(row["attachment_ids"], learner_message_id)
 
     chosen_kind = row[f"variant_{body.variant}_kind"]
-    chosen_vector_json = (
-        row["personalized_vector"] if chosen_kind == "personalized" else row["baseline_vector"]
-    )
-    chosen_vector = ControlVector.model_validate(chosen_vector_json)
     catalogue = state.catalogues[row["ruleset_version"]]
-    profile = repos.profiles.get(learner_id)
-    system_prompt = assemble(
-        chosen_vector, catalogue, profile.preferences if profile is not None else None
-    )
+    chosen_vector: ControlVector | None
+    if chosen_kind == "personalized":
+        chosen_vector = ControlVector.model_validate(row["personalized_vector"])
+        profile = repos.profiles.get(learner_id)
+        system_prompt = assemble(
+            chosen_vector, catalogue, profile.preferences if profile is not None else None
+        )
+    else:
+        chosen_vector = None
+        system_prompt = assemble_unconfigured(catalogue)
 
     repos.turn_logs.append(
         build_turn_log(

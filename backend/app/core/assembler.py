@@ -18,7 +18,7 @@ def assemble(
     """One clause per control parameter, then (optionally) one per preference.
 
     Preferences are not part of the vector or the mapping; they only add fixed
-    sentences here. Omit them (the generic comparison baseline) for none.
+    sentences here. Omit them for none.
     """
     lines = [catalogue.base_instruction]
     for field in PARAMETER_NAMES:
@@ -31,3 +31,10 @@ def assemble(
         if preferences.learner_type != "none":
             lines.append(catalogue.preferences["learner_type"][preferences.learner_type])
     return "\n".join(lines)
+
+
+def assemble_unconfigured(catalogue: ClauseCatalogue) -> str:
+    """The generic comparison arm: the base instruction alone -- no parameter
+    clauses and no preference clauses, so it can never coincide with any
+    configured prompt from `assemble()`."""
+    return catalogue.base_instruction

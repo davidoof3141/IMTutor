@@ -9,7 +9,7 @@ def build_turn_log(
     *,
     learner_id: str,
     ruleset_version: str,
-    effective_vector: ControlVector,
+    effective_vector: ControlVector | None,
     system_prompt: str,
     book_context: str = "",
     study_mode: dict[str, Any] | None = None,
@@ -27,7 +27,7 @@ def build_turn_log(
     return {
         "learner_id": learner_id,
         "ruleset_version": ruleset_version,
-        "effective_vector": effective_vector.model_dump(),
+        "effective_vector": effective_vector.model_dump() if effective_vector else None,
         "system_prompt_sha256": hashlib.sha256(system_prompt.encode()).hexdigest(),
         "book_context": book_context,
         "study_mode": study_mode,

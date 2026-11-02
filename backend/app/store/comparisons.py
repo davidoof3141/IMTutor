@@ -13,7 +13,7 @@ ReasonTag = Literal["detail", "tone", "clarity", "examples", "difficulty", "othe
 
 _COLUMNS = (
     "id, conversation_id, learner_id, learner_message, ruleset_version, "
-    "personalized_vector, baseline_vector, variant_a_kind, variant_b_kind, "
+    "personalized_vector, variant_a_kind, variant_b_kind, "
     "variant_a_text, variant_a_model, variant_a_prompt_tokens, variant_a_completion_tokens, "
     "variant_b_text, variant_b_model, variant_b_prompt_tokens, variant_b_completion_tokens, "
     "book_context, book_image_refs, page_refs, attachment_ids, lesson_id, study_mode, "
@@ -44,7 +44,6 @@ class ComparisonRepository:
         learner_message: str,
         ruleset_version: str,
         personalized_vector: dict[str, Any],
-        baseline_vector: dict[str, Any],
         variant_a_kind: VariantKind,
         variant_b_kind: VariantKind,
         book_context: str,
@@ -59,10 +58,10 @@ class ComparisonRepository:
             """
             INSERT INTO answer_comparisons (
                 id, conversation_id, learner_id, learner_message, ruleset_version,
-                personalized_vector, baseline_vector, variant_a_kind, variant_b_kind,
+                personalized_vector, variant_a_kind, variant_b_kind,
                 book_context, book_image_refs, page_refs, attachment_ids,
                 lesson_id, study_mode
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """,
             (
                 comparison_id,
@@ -71,7 +70,6 @@ class ComparisonRepository:
                 learner_message,
                 ruleset_version,
                 json.dumps(personalized_vector),
-                json.dumps(baseline_vector),
                 variant_a_kind,
                 variant_b_kind,
                 book_context,
@@ -122,14 +120,15 @@ class ComparisonRepository:
 
     def kind_preference_counts(self) -> list[dict[str, Any]]:
         """How often each kind (personalized/generic) was the one picked,
-        across every decided comparison -- for the admin stats view."""
+        across every decided comparison against the unconfigured arm (legacy rows
+        with a baseline_vector are excluded) -- for the admin stats view."""
         rows = self._conn.execute(
             """
             SELECT
                 CASE WHEN chosen_variant = 'a' THEN variant_a_kind ELSE variant_b_kind END AS kind,
                 COUNT(*) AS count
             FROM answer_comparisons
-            WHERE decided_at IS NOT NULL
+            WHERE decided_at IS NOT NULL AND baseline_vector IS NULL
             GROUP BY kind
             """
         ).fetchall()
@@ -153,7 +152,7 @@ class ComparisonRepository:
                                     ELSE variant_b_kind END) = 'generic'
                     ) AS generic
                 FROM answer_comparisons
-                WHERE decided_at IS NOT NULL
+                WHERE decided_at IS NOT NULL AND baseline_vector IS NULL
                 GROUP BY learner_id
             )
             SELECT
@@ -174,7 +173,7 @@ class ComparisonRepository:
             """
             SELECT reason, COUNT(*) AS count
             FROM answer_comparisons, jsonb_array_elements_text(reasons) AS reason
-            WHERE decided_at IS NOT NULL
+            WHERE decided_at IS NOT NULL AND baseline_vector IS NULL
             GROUP BY reason
             ORDER BY count DESC
             """

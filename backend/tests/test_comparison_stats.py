@@ -15,7 +15,6 @@ def _decide(repo: ComparisonRepository, conn: Conn, learner: str, picked_kind: s
         learner_message="q",
         ruleset_version="v",
         personalized_vector={},
-        baseline_vector={},
         variant_a_kind=picked_kind,  # type: ignore[arg-type]
         variant_b_kind=other,  # type: ignore[arg-type]
         book_context="",
@@ -57,7 +56,6 @@ def test_decided_counts_by_section(db_conn: Conn) -> None:
             learner_message="q",
             ruleset_version="v",
             personalized_vector={},
-            baseline_vector={},
             variant_a_kind="personalized",
             variant_b_kind="generic",
             book_context="",
@@ -77,3 +75,13 @@ def test_decided_counts_by_section(db_conn: Conn) -> None:
     make(None, True)  # chapter-level -> not counted
 
     assert repo.decided_counts_by_section("sec") == {"4.1": 2, "4.2": 1}
+
+
+def test_stats_ignore_legacy_rows_with_a_baseline_vector(db_conn: Conn) -> None:
+    repo = ComparisonRepository(db_conn)
+    _decide(repo, db_conn, "new", "personalized")
+    db_conn.execute("UPDATE answer_comparisons SET baseline_vector = '{}'::jsonb")
+    db_conn.commit()
+    _decide(repo, db_conn, "new2", "generic")
+
+    assert repo.kind_preference_counts() == [{"kind": "generic", "count": 1}]

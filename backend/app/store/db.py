@@ -303,7 +303,9 @@ CREATE TABLE IF NOT EXISTS answer_comparisons (
     learner_message TEXT NOT NULL,
     ruleset_version TEXT NOT NULL,
     personalized_vector JSONB NOT NULL,
-    baseline_vector JSONB NOT NULL,
+    -- Legacy: the rule-set defaults vector of the old "generic" arm. NULL for
+    -- the current arm, which is the unconfigured base prompt (no vector at all).
+    baseline_vector JSONB,
     -- Which vector produced each on-screen slot -- randomized per turn so
     -- position never correlates with personalization.
     variant_a_kind TEXT NOT NULL CHECK (variant_a_kind IN ('personalized', 'generic')),
@@ -331,6 +333,8 @@ CREATE TABLE IF NOT EXISTS answer_comparisons (
 
 CREATE INDEX IF NOT EXISTS answer_comparisons_conversation_idx
     ON answer_comparisons (conversation_id, created_at);
+-- Tables created before the generic arm became the unconfigured prompt.
+ALTER TABLE answer_comparisons ALTER COLUMN baseline_vector DROP NOT NULL;
 
 CREATE TABLE IF NOT EXISTS turn_logs (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,

@@ -113,7 +113,7 @@ def test_compare_streams_both_variants_and_choose_persists_the_pick(
         assert any(e["variant"] == label and e.get("done") for e in events)
         texts[label] = deltas
     # The comparison is a live A/B: the two variants differ (different system
-    # prompts -- personalized vs. the rule set's plain defaults).
+    # prompts -- personalized vs. the unconfigured base prompt).
     assert texts["a"] != texts["b"]
 
     # Nothing is in the conversation yet -- the learner hasn't picked.
@@ -303,3 +303,48 @@ def test_revoked_group_link_stops_working(raw_client: TestClient) -> None:
 
     raw_client.headers.pop("Authorization", None)
     assert raw_client.post("/api/auth/join", json={"token": token}).status_code == 401
+
+
+def test_generic_arm_is_the_unconfigured_base_prompt_and_arms_share_context(
+    raw_client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.core.assembler import assemble_unconfigured
+    from app.core.clauses import load_catalogue
+    from tests.conftest import RULES_DIR
+
+    calls: list[dict[str, object]] = []
+
+    def recording_stream(**kwargs: object):
+        calls.append(kwargs)
+        yield from _fake_stream(**kwargs)
+
+    monkeypatch.setattr("app.api.chat.assert_configured", lambda: None)
+    monkeypatch.setattr("app.api.chat.stream_turn", recording_stream)
+    learner_id = _link_learner(raw_client)
+
+    with raw_client.stream(
+        "POST", f"/api/chat/{learner_id}/compare", json={"message": "Was ist ein Marktrisiko?"}
+    ) as r:
+        comparison_id = r.headers["x-comparison-id"]
+        list(r.iter_text())
+
+    catalogue = load_catalogue(RULES_DIR / "clauses.v1.yaml")
+    assert len(calls) == 2
+    prompts = sorted((str(c["system_prompt"]) for c in calls), key=len)
+    generic, personalized = prompts
+    assert generic == catalogue.base_instruction == assemble_unconfigured(catalogue)
+    for clauses in catalogue.clauses.values():
+        assert not any(text in generic for text in clauses.values())
+    for group in catalogue.preferences.values():
+        assert not any(text in generic for text in group.values())
+    assert personalized != generic and personalized.startswith(generic)
+
+    # Same model, book context, history and attachments in both arms.
+    for key in ("model", "book_context", "history", "document_texts", "image_data_urls", "user_message"):
+        assert calls[0][key] == calls[1][key]
+
+    chosen = raw_client.post(
+        f"/api/chat/{learner_id}/compare/{comparison_id}/choose",
+        json={"variant": "a", "reasons": ["clarity"]},
+    )
+    assert chosen.status_code == 200
