@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 560" width="1100" height="560" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#222"/></marker>
+    <style>
+      .t{font-size:13px;fill:#111} .b{font-weight:bold;font-size:14px} .s{font-size:11.5px;fill:#444} .st{font-size:11.5px;fill:#555;font-style:italic}
+      .node{fill:#fff;stroke:#222;stroke-width:1.6} .cont{fill:#f6f6f6;stroke:#222;stroke-width:1.6}
+      .art{fill:#fff;stroke:#555;stroke-width:1.1} .ln{stroke:#222;stroke-width:1.5;fill:none} .top{fill:#e4e4e4;stroke:#222;stroke-width:1.6}
+    </style>
+  </defs>
+  <rect width="1100" height="560" fill="#fff"/>
+  <text x="550" y="28" text-anchor="middle" class="t b" font-size="17">Local development deployment (docker compose)</text>
+
+  <!-- browser -->
+  <polygon class="top" points="30,206 42,194 212,194 200,206"/><polygon class="top" points="200,206 212,194 212,314 200,326"/>
+  <rect class="node" x="30" y="206" width="170" height="120"/>
+  <text x="115" y="228" text-anchor="middle" class="st">«device»</text>
+  <text x="115" y="246" text-anchor="middle" class="t b">Developer's browser</text>
+  <text x="115" y="272" text-anchor="middle" class="s">http://localhost:5173</text>
+
+  <!-- host -->
+  <polygon class="top" points="260,66 272,54 812,54 800,66"/><polygon class="top" points="800,66 812,54 812,516 800,528"/>
+  <rect class="cont" x="260" y="66" width="540" height="462"/>
+  <text x="530" y="86" text-anchor="middle" class="st">«execution environment»</text>
+  <text x="530" y="104" text-anchor="middle" class="t b">Docker host · Compose network</text>
+
+  <rect class="node" x="280" y="130" width="200" height="130"/>
+  <text x="380" y="152" text-anchor="middle" class="st">«container» frontend</text>
+  <text x="380" y="170" text-anchor="middle" class="t b">node:22-slim</text>
+  <text x="380" y="192" text-anchor="middle" class="s">Vite dev server (HMR) :5173</text>
+  <text x="380" y="210" text-anchor="middle" class="s">proxy /api → backend:8000</text>
+  <text x="380" y="232" text-anchor="middle" class="s">bind mount ./frontend → /app</text>
+
+  <rect class="node" x="580" y="130" width="200" height="150"/>
+  <text x="680" y="152" text-anchor="middle" class="st">«container» backend</text>
+  <text x="680" y="170" text-anchor="middle" class="t b">python:3.11-slim</text>
+  <text x="680" y="192" text-anchor="middle" class="s">FastAPI / uvicorn --reload :8000</text>
+  <text x="680" y="210" text-anchor="middle" class="s">venv at /opt/venv (uv)</text>
+  <text x="680" y="228" text-anchor="middle" class="s">env_file backend/.env</text>
+  <text x="680" y="246" text-anchor="middle" class="s">bind mount ./backend → /app</text>
+
+  <rect class="node" x="580" y="360" width="200" height="130"/>
+  <text x="680" y="382" text-anchor="middle" class="st">«container» db</text>
+  <text x="680" y="400" text-anchor="middle" class="t b">pgvector/pgvector:pg16</text>
+  <text x="680" y="422" text-anchor="middle" class="s">Postgres :5432 (127.0.0.1 only)</text>
+  <text x="680" y="440" text-anchor="middle" class="s">healthcheck: pg_isready</text>
+  <rect class="art" x="610" y="452" width="140" height="28"/>
+  <text x="680" y="471" text-anchor="middle" class="s">«volume» pgdata</text>
+
+  <!-- OpenRouter -->
+  <polygon class="top" points="880,146 892,134 1072,134 1060,146"/><polygon class="top" points="1060,146 1072,134 1072,236 1060,248"/>
+  <rect class="node" x="880" y="146" width="180" height="102"/>
+  <text x="970" y="168" text-anchor="middle" class="st">«external system»</text>
+  <text x="970" y="186" text-anchor="middle" class="t b">OpenRouter API</text>
+  <text x="970" y="208" text-anchor="middle" class="s">chat + embeddings</text>
+  <text x="970" y="226" text-anchor="middle" class="s">via OPENROUTER_API_KEY</text>
+
+  <path class="ln" marker-end="url(#a)" d="M200,266 L280,200"/>
+    <path class="ln" marker-end="url(#a)" d="M480,195 L580,195"/>
+  <text x="488" y="186" class="s">/api proxy</text>
+  <path class="ln" marker-end="url(#a)" d="M680,280 L680,360"/>
+  <text x="690" y="316" class="s">DATABASE_URL</text><text x="690" y="332" class="s">(db:5432)</text>
+  <path class="ln" marker-end="url(#a)" d="M780,195 L880,195"/>
+  <text x="820" y="186" class="s">HTTPS</text>
+  </svg>

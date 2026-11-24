@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1260 740" width="1260" height="740" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#222"/></marker>
+    <style>
+      .t{font-size:13px;fill:#111} .b{font-weight:bold;font-size:14px} .s{font-size:11.5px;fill:#444} .st{font-size:11.5px;fill:#555;font-style:italic}
+      .node{fill:#fff;stroke:#222;stroke-width:1.6} .cont{fill:#f6f6f6;stroke:#222;stroke-width:1.6}
+      .art{fill:#fff;stroke:#555;stroke-width:1.1} .ln{stroke:#222;stroke-width:1.5;fill:none}
+      .top{fill:#e4e4e4;stroke:#222;stroke-width:1.6}
+    </style>
+  </defs>
+  <rect width="1260" height="740" fill="#fff"/>
+  <text x="630" y="28" text-anchor="middle" class="t b" font-size="17">Production deployment (Vercel + Neon + OpenRouter)</text>
+
+  <!-- Client node -->
+  <polygon class="top" points="30,236 42,224 222,224 210,236"/><polygon class="top" points="210,236 222,224 222,384 210,396"/>
+  <rect class="node" x="30" y="236" width="180" height="160"/>
+  <text x="120" y="258" text-anchor="middle" class="st">«device»</text>
+  <text x="120" y="276" text-anchor="middle" class="t b">User's browser</text>
+  <rect class="art" x="45" y="292" width="150" height="46"/>
+  <text x="120" y="311" text-anchor="middle" class="s">React SPA</text><text x="120" y="327" text-anchor="middle" class="s">(JS/CSS bundle)</text>
+  <rect class="art" x="45" y="346" width="150" height="38"/>
+  <text x="120" y="362" text-anchor="middle" class="s">localStorage</text><text x="120" y="377" text-anchor="middle" class="s">(token, theme)</text>
+
+  <!-- Vercel -->
+  <polygon class="top" points="290,66 302,54 802,54 790,66"/><polygon class="top" points="790,66 802,54 802,696 790,708"/>
+  <rect class="cont" x="290" y="66" width="500" height="642"/>
+  <text x="540" y="86" text-anchor="middle" class="st">«execution environment»</text>
+  <text x="540" y="104" text-anchor="middle" class="t b">Vercel project (one domain)</text>
+
+  <rect class="node" x="310" y="300" width="150" height="110"/>
+  <text x="385" y="322" text-anchor="middle" class="st">«component»</text>
+  <text x="385" y="340" text-anchor="middle" class="t b">Edge routing</text>
+  <text x="385" y="362" text-anchor="middle" class="s">root vercel.json</text>
+  <text x="385" y="378" text-anchor="middle" class="s">rewrites: /api/* → backend</text>
+  <text x="385" y="394" text-anchor="middle" class="s">/* → frontend</text>
+
+  <!-- frontend service -->
+  <rect class="node" x="520" y="124" width="250" height="150"/>
+  <text x="645" y="146" text-anchor="middle" class="st">«service» static hosting</text>
+  <text x="645" y="164" text-anchor="middle" class="t b">frontend</text>
+  <text x="645" y="182" text-anchor="middle" class="s">root: frontend/ · Vite build</text>
+  <rect class="art" x="540" y="196" width="210" height="62"/>
+  <text x="645" y="214" text-anchor="middle" class="st">«artifact»</text>
+  <text x="645" y="231" text-anchor="middle" class="s">dist/ (index.html, JS, CSS)</text>
+  <text x="645" y="247" text-anchor="middle" class="s">no server-side code</text>
+
+  <!-- backend service -->
+  <rect class="node" x="520" y="316" width="250" height="372"/>
+  <text x="645" y="338" text-anchor="middle" class="st">«service» serverless function (Python)</text>
+  <text x="645" y="356" text-anchor="middle" class="t b">backend</text>
+  <text x="645" y="374" text-anchor="middle" class="s">root: backend/ · maxDuration 60 s</text>
+  <rect class="art" x="540" y="388" width="210" height="82"/>
+  <text x="645" y="406" text-anchor="middle" class="st">«artifact»</text>
+  <text x="645" y="423" text-anchor="middle" class="s">FastAPI app (app/main.py)</text>
+  <text x="645" y="439" text-anchor="middle" class="s">api · core (mapping, planner)</text>
+  <text x="645" y="455" text-anchor="middle" class="s">llm · rag · store · security</text>
+  <rect class="art" x="540" y="480" width="210" height="40"/>
+  <text x="645" y="497" text-anchor="middle" class="s">requirements.txt</text><text x="645" y="512" text-anchor="middle" class="s">(from pyproject.toml / uv.lock)</text>
+  <rect class="art" x="540" y="530" width="210" height="40"/>
+  <text x="645" y="547" text-anchor="middle" class="s">rules/ruleset.v1.yaml</text><text x="645" y="562" text-anchor="middle" class="s">content/diagnostics/*.yaml</text>
+  <rect class="art" x="540" y="580" width="210" height="40"/>
+  <text x="645" y="597" text-anchor="middle" class="s">course textbook PDF (Krcmar 2015)</text><text x="645" y="612" text-anchor="middle" class="s">(static, read-only)</text>
+  <rect class="art" x="540" y="630" width="210" height="40"/>
+  <text x="645" y="647" text-anchor="middle" class="s">data/book_images/</text><text x="645" y="662" text-anchor="middle" class="s">(extracted figures, read-only)</text>
+
+  <g transform="translate(40,0)"><!-- Neon -->
+  <polygon class="top" points="940,316 952,304 1192,304 1180,316"/><polygon class="top" points="1180,316 1192,304 1192,534 1180,546"/>
+  <rect class="node" x="940" y="316" width="240" height="230"/>
+  <text x="1060" y="338" text-anchor="middle" class="st">«node» managed service</text>
+  <text x="1060" y="356" text-anchor="middle" class="t b">Neon Postgres</text>
+  <text x="1060" y="373" text-anchor="middle" class="s">us-east-2 · pooled endpoint</text>
+  <rect class="art" x="955" y="388" width="210" height="142"/>
+  <text x="1060" y="406" text-anchor="middle" class="st">«database» itm_tutor + pgvector</text>
+  <text x="1060" y="428" text-anchor="middle" class="s">users · conversations · messages</text>
+  <text x="1060" y="445" text-anchor="middle" class="s">attachments (BYTEA) · lesson plans</text>
+  <text x="1060" y="462" text-anchor="middle" class="s">turn logs · rate-limit counters</text>
+  <text x="1060" y="479" text-anchor="middle" class="s">book_chunks (embedding vector)</text>
+  <text x="1060" y="505" text-anchor="middle" class="s">TLS enforced (sslmode=require)</text>
+
+  <!-- OpenRouter -->
+  <polygon class="top" points="940,606 952,594 1192,594 1180,606"/><polygon class="top" points="1180,606 1192,594 1192,684 1180,696"/>
+  <rect class="node" x="940" y="606" width="240" height="90"/>
+  <text x="1060" y="628" text-anchor="middle" class="st">«external system»</text>
+  <text x="1060" y="646" text-anchor="middle" class="t b">OpenRouter API</text>
+  <text x="1060" y="665" text-anchor="middle" class="s">chat completions</text>
+  <text x="1060" y="681" text-anchor="middle" class="s">text embeddings</text>
+
+  </g>
+  <!-- connections -->
+  <path class="ln" marker-end="url(#a)" d="M210,330 L310,350"/>
+  <text x="228" y="318" class="s">HTTPS</text>
+  <path class="ln" marker-end="url(#a)" d="M460,340 Q490,340 490,200 L520,200"/>
+  <text x="468" y="258" class="s">/*</text>
+  <path class="ln" marker-end="url(#a)" d="M460,370 Q490,370 490,420 L520,420"/>
+  <text x="456" y="440" class="s">/api/*</text>
+  <path class="ln" marker-end="url(#a)" d="M770,440 L980,440"/>
+  <text x="814" y="428" class="s">psycopg pool</text><text x="814" y="460" class="s">DATABASE_URL (TLS)</text>
+  <path class="ln" marker-end="url(#a)" d="M770,650 L980,650"/>
+  <text x="814" y="638" class="s">HTTPS · API key</text><text x="814" y="670" class="s">OPENROUTER_API_KEY</text>
+
+  <!-- legend -->
+  <text x="30" y="520" class="s" font-weight="bold">Notes</text>
+  <text x="30" y="538" class="s">• Backend is stateless: no local disk</text>
+  <text x="30" y="554" class="s">  writes at request time; all state</text>
+  <text x="30" y="570" class="s">  lives in Neon.</text>
+  <text x="30" y="590" class="s">• Config via env vars: DATABASE_URL,</text>
+  <text x="30" y="606" class="s">  OPENROUTER_*, AUTH_SECRET,</text>
+  <text x="30" y="622" class="s">  FRONTEND_ORIGIN.</text>
+  <text x="30" y="642" class="s">• Frontend calls the API same-origin</text>
+  <text x="30" y="658" class="s">  (/api).</text>
+</svg>

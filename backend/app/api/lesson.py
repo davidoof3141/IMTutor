@@ -122,7 +122,11 @@ def _run_step(
 
     response = complete_turn(
         system_prompt=system_prompt,
-        user_message=STEP_TRIGGER_MESSAGE,
+        # The step instruction is repeated in the closing user message so it is
+        # the last thing the model reads, after the conversation history. As a
+        # system message alone it lost out to the general clauses and to the
+        # pattern of earlier replies. Both copies are the same fixed template text.
+        user_message=f"{STEP_TRIGGER_MESSAGE}\n\n{instruction}",
         model=model,
         book_context=book_context,
         history=history,

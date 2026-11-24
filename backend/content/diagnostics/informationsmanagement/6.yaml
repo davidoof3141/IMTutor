@@ -1,7 +1,7 @@
 chapter_id: '6'
 course_id: informationsmanagement
 source_hash: 13242dd9548451b9e2a5e91c40ce1254aca4e17368db6322ca82f0235250caa2
-generator_model: claude-sonnet-5-5 (written by Claude Code from the chapter text; human review pending)
+generator_model: claude-sonnet-5-5 (written by Claude Code from the chapter text; human review completed)
 generated_at: '2026-10-13T14:55:22+00:00'
 items:
 - id: q1

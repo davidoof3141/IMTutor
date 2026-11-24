@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import {
   ApiError,
+  abandonLesson,
+  advanceLesson,
   consumeLoginLinkFromUrl,
   consumeGroupJoinFromUrl,
+  createLesson,
   getComparisonProgress,
   getToken,
   hasPendingGroupJoin,
@@ -21,6 +24,7 @@ import { useAuth } from "./auth/useAuth";
 import { CurriculumPanel } from "./curriculum/CurriculumPanel";
 import { DiagnosticQuiz, DiagnosticSummary } from "./diagnostic/DiagnosticPanel";
 import { HistorySidebar } from "./history/HistorySidebar";
+import { LessonRail } from "./lesson/LessonRail";
 import { ModeToggle } from "./mode/ModeToggle";
 import { OnboardingForm } from "./onboarding/OnboardingForm";
 import { SectionDoneNotice, QUESTIONS_PER_SECTION } from "./onboarding/SectionDoneNotice";
@@ -112,6 +116,16 @@ function App() {
   // changes, so a lesson action's own openConversation() call (below) is
   // what refreshes this after create/advance/abandon.
   const [lesson, setLesson] = useState<LessonResponse | null>(null);
+  const [lessonBusy, setLessonBusy] = useState(false);
+  const [lessonError, setLessonError] = useState<string | null>(null);
+  // Training-mode selection (selKey) whose lesson should start by itself once
+  // its diagnostic and configuration summary are out of the way. Set only when
+  // the learner picks a chapter/section, so resuming a thread or opening a new
+  // one never plans a lesson unasked.
+  const [autoStartFor, setAutoStartFor] = useState<string | null>(null);
+  // Guards against starting the same selection twice (StrictMode re-runs
+  // effects; a slow create must not be fired again by a re-render).
+  const autoStartedRef = useRef<string | null>(null);
   const [scheduleCollapsed, setScheduleCollapsed] = useState<boolean>(() => {
     try {
       return localStorage.getItem("itm-schedule-collapsed") === "1";
@@ -178,6 +192,12 @@ function App() {
     if (changed) {
       openConversation(null);
       setFinishedSection(null);
+      setAutoStartFor(
+        next.mode === "training" && next.chapter_number
+          ? `${next.chapter_number}:${next.section_number ?? ""}`
+          : null,
+      );
+      autoStartedRef.current = null;
     }
   }
 
@@ -236,14 +256,58 @@ function App() {
       .catch((err) => {
         if (cancelled) return;
         // 404 just means this thread has no lesson -- an ordinary chat, not an error.
-        // Other failures leave the lesson as it was; lessons aren't started from
-        // the UI any more, so there is no panel to show an error in.
-        if (err instanceof ApiError && err.status === 404) setLesson(null);
+        if (err instanceof ApiError && err.status === 404) {
+          setLesson(null);
+        } else {
+          setLessonError(err instanceof ApiError ? err.message : "Der Server ist nicht erreichbar.");
+        }
       });
     return () => {
       cancelled = true;
     };
   }, [activeConversationId, chatEpoch]);
+
+  async function handleCreateLesson() {
+    if (!learnerId) return;
+    setLessonBusy(true);
+    setLessonError(null);
+    try {
+      const created = await createLesson(learnerId);
+      openConversation(created.plan.conversation_id);
+    } catch (err) {
+      setLessonError(err instanceof ApiError ? err.message : "Der Server ist nicht erreichbar.");
+    } finally {
+      setLessonBusy(false);
+    }
+  }
+
+  async function handleAdvanceLesson() {
+    if (activeConversationId === null) return;
+    setLessonBusy(true);
+    setLessonError(null);
+    try {
+      await advanceLesson(activeConversationId);
+      openConversation(activeConversationId);
+    } catch (err) {
+      setLessonError(err instanceof ApiError ? err.message : "Der Server ist nicht erreichbar.");
+    } finally {
+      setLessonBusy(false);
+    }
+  }
+
+  async function handleAbandonLesson() {
+    if (activeConversationId === null) return;
+    setLessonBusy(true);
+    setLessonError(null);
+    try {
+      await abandonLesson(activeConversationId);
+      openConversation(activeConversationId);
+    } catch (err) {
+      setLessonError(err instanceof ApiError ? err.message : "Der Server ist nicht erreichbar.");
+    } finally {
+      setLessonBusy(false);
+    }
+  }
 
   useEffect(() => {
     if (!learnerId) return;
@@ -278,6 +342,24 @@ function App() {
         // Das Panel behält seinen letzten Stand.
       });
   }, [learnerId, selKey]);
+
+  // Implicit lesson start: no "start" button press needed. Waits until the
+  // diagnostic for this selection is loaded, answered (if required) and its
+  // summary closed, so the lesson is planned from the chapter-level vector.
+  // Study (login-link) accounts never get lessons -- the backend refuses them.
+  useEffect(() => {
+    if (dualMode || !learnerId || selKey === null || autoStartFor !== selKey) return;
+    if (autoStartedRef.current === selKey || lessonBusy) return;
+    const status = diagnostic && diagnostic.sel === selKey ? diagnostic.status : null;
+    if (status === null) return;
+    const pending = status.required && !status.result;
+    const summaryShown = status.result != null && summaryFor === selKey;
+    if (pending || summaryShown) return;
+    autoStartedRef.current = selKey;
+    setAutoStartFor(null);
+    void handleCreateLesson();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dualMode, learnerId, selKey, autoStartFor, diagnostic, summaryFor, lessonBusy]);
 
   function handleDiagnosticResult(sel: string, result: DiagnosticResult) {
     setDiagnostic((prev) =>
@@ -481,6 +563,20 @@ function App() {
               dualMode={dualMode}
               comparisonProgress={comparisonProgress}
             />
+            {/* Lessons are not offered to study (login-link) accounts: the
+                backend refuses them with 403, and the comparison mode
+                needs plain question turns. */}
+            {!dualMode && !scheduleCollapsed && !diagnosticPending && !summaryOpen && (
+              <LessonRail
+                studyMode={studyMode}
+                lesson={lesson}
+                busy={lessonBusy}
+                error={lessonError}
+                onCreate={() => void handleCreateLesson()}
+                onAdvance={() => void handleAdvanceLesson()}
+                onAbandon={() => void handleAbandonLesson()}
+              />
+            )}
           </aside>
         )}
 

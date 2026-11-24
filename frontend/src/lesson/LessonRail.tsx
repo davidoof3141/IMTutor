@@ -46,15 +46,18 @@ export function LessonRail({ studyMode, lesson, busy, error, onCreate, onAdvance
         <div className="lesson-rail-head">
           <span className="lesson-rail-title">Lektion</span>
         </div>
-        <p className="muted-note">Noch keine Lektion für dieses Kapitel gestartet.</p>
-        <button
-          type="button"
-          className="primary lesson-start-btn"
-          disabled={busy}
-          onClick={onCreate}
-        >
-          {busy ? "Wird geplant …" : "Lektion starten"}
-        </button>
+        {busy ? (
+          // The lesson starts by itself after a chapter is selected (App.tsx);
+          // this is what the learner sees while its first step is generated.
+          <p className="muted-note">Die Lektion wird vorbereitet …</p>
+        ) : (
+          <>
+            <p className="muted-note">Noch keine Lektion für dieses Kapitel gestartet.</p>
+            <button type="button" className="primary lesson-start-btn" onClick={onCreate}>
+              Lektion starten
+            </button>
+          </>
+        )}
         {error && <p className="error-banner">{error}</p>}
       </div>
     );

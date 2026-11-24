@@ -1,0 +1,55 @@
+version: v3
+
+# One fixed instruction per StepKind. `{section_ref}`, `{page_start}`,
+# `{page_end}` and `{concreteness_clause}` (the fixed clause-catalogue sentence
+# for this step's concreteness level) are the only substitutions allowed (see
+# core/step_templates.py::format_step) -- no other interpolation, no
+# free text. Passed to the model as their own system message via
+# `complete_turn`'s `book_context` parameter, next to the training-mode focus
+# message (`app/rag/toc.py::format_focus`) -- never folded into
+# `core/assembler.py`'s output.
+#
+# v3: each template now limits the reply to its own kind of step. In v2 the
+# replies to explain, example and checkpoint steps all carried an explanation,
+# examples, a quiz and the review hint, because the assembled instruction
+# (which asks for examples and quizzes in general) outweighed the step. The
+# lesson plan already spreads examples, checkpoints and the review hint over
+# their own steps, so within a lesson the step decides what one reply holds.
+templates:
+  explain: >-
+    Dies ist ein Lektionsschritt vom Typ Erklärung. Erkläre das nächste
+    Konzept aus Abschnitt {section_ref} des Lehrbuchs (S. {page_start}-{page_end}),
+    gemäß der bereits gegebenen Anweisung zur Erklärungstiefe. Bleibe in diesem
+    Abschnitt; gehe noch nicht zu späterem Stoff über. Gib in diesem Schritt
+    nur die Erklärung: keine durchgerechneten Beispiele, keine Quizfragen und
+    keinen Hinweis auf die nächste Wiederholung, denn diese folgen in eigenen
+    Schritten der Lektion. Diese Begrenzung hat für diesen Schritt Vorrang vor
+    den allgemeinen Anweisungen zu Beispielen, Zwischenfragen und
+    Wiederholung. Für diesen Schritt gilt abweichend von der allgemeinen
+    Anweisung zur Konkretheit: {concreteness_clause}
+  example: >-
+    Dies ist ein Lektionsschritt vom Typ Beispiel. Gib genau ein
+    durchgerechnetes Beispiel, das ein bereits erklärtes Konzept aus Abschnitt
+    {section_ref} des Lehrbuchs (S. {page_start}-{page_end}) veranschaulicht,
+    in der Branche aus der allgemeinen Anweisung. Wiederhole die Erklärung
+    nicht, stelle keine Quizfragen und gib keinen Hinweis auf die nächste
+    Wiederholung. Diese Begrenzung hat für diesen Schritt Vorrang vor den
+    allgemeinen Anweisungen zu Erklärungstiefe, Zwischenfragen und
+    Wiederholung. Für diesen Schritt gilt abweichend von der allgemeinen
+    Anweisung zur Konkretheit: {concreteness_clause}
+  checkpoint: >-
+    Dies ist ein Lektionsschritt vom Typ Verständnischeck. Stelle der
+    lernenden Person genau eine kurze Frage zum Verständnis von Abschnitt
+    {section_ref} des Lehrbuchs (S. {page_start}-{page_end}) und warte dann auf
+    die Antwort. Verrate die Antwort noch nicht, erkläre keinen neuen Stoff und
+    gib keine Beispiele. Diese Begrenzung hat für diesen Schritt Vorrang vor
+    den allgemeinen Anweisungen. Für diesen Schritt gilt abweichend von der
+    allgemeinen Anweisung zur Konkretheit: {concreteness_clause}
+  recap: >-
+    Dies ist der letzte Lektionsschritt. Fasse kurz zusammen, was in
+    {section_ref} (S. {page_start}-{page_end}) behandelt wurde, ohne neue
+    Beispiele oder Quizfragen, und teile der lernenden Person mit, dass die
+    Lektion abgeschlossen ist. Nenne zum Schluss den Abstand bis zur nächsten
+    Wiederholung gemäß der allgemeinen Anweisung. Für diesen Schritt gilt
+    abweichend von der allgemeinen Anweisung zur Konkretheit:
+    {concreteness_clause}
